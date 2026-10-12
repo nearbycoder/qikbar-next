@@ -19,6 +19,14 @@
   <a href="https://qikbar.com/llms.txt">llms.txt</a>
 </p>
 
+<p align="center">
+  <a href="https://qikbar.com/video/qikbar.mp4">
+    <img src="assets/video-thumbnail.jpg" width="720" alt="Watch the Qikbar product film">
+  </a>
+  <br>
+  <sub><a href="https://qikbar.com/video/qikbar.mp4">Watch the 76-second film</a> (sound on)</sub>
+</p>
+
 ---
 
 ```bash
