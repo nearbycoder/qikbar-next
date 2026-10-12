@@ -30,6 +30,9 @@ Bun.serve({
   async fetch(req) {
     const url = new URL(req.url)
     if (url.pathname === '/healthz') return new Response('ok')
+    // One canonical host: www.example.com → example.com
+    const host = req.headers.get('host') ?? ''
+    if (host.startsWith('www.')) return Response.redirect(`https://${host.slice(4)}${url.pathname}${url.search}`, 301)
     const hit = await find(url.pathname)
     if (!hit) {
       const notFound = Bun.file(join(root, '404.html'))
