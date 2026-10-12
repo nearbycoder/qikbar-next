@@ -1,8 +1,9 @@
 <p align="center">
-  <img src="assets/icon.svg" width="72" height="72" alt="Qikbar">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/logo-wordmark-dark.svg">
+    <img src="assets/logo-wordmark-light.svg" width="280" alt="Qikbar">
+  </picture>
 </p>
-
-<h1 align="center">Qikbar</h1>
 
 <p align="center">
   <strong>The open-source command bar for any web app.</strong><br>
@@ -92,6 +93,10 @@ bun run dev        # website at http://localhost:4321
 ## Contributing
 
 Issues, extensions, themes and docs fixes are all welcome. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Brand
+
+The logo lives in [`assets/`](assets): `logo.svg` (mark), `logo-wordmark-dark.svg` and `logo-wordmark-light.svg`, plus PNGs. Run `bun run --filter @qikbar/web brand` to regenerate favicons and app icons after changing it.
 
 ## License
 

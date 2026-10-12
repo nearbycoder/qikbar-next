@@ -1,3 +1,7 @@
+<p>
+  <img src="https://raw.githubusercontent.com/nearbycoder/qikbar-next/main/assets/logo-wordmark-light.png" width="240" alt="Qikbar">
+</p>
+
 # qikbar
 
 **The open-source command bar for any web app.** Raycast-style search, routing, actions, extensions and AI in one tiny, themeable package with zero dependencies.

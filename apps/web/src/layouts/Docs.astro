@@ -18,7 +18,7 @@ const toc = headings.filter((h) => h.depth === 2 || h.depth === 3)
 const mdHref = doc.id === 'index' ? '/docs/index.md' : `/docs/${doc.id}.md`
 const editHref = `https://github.com/nearbycoder/qikbar-next/edit/main/apps/web/src/content/docs/${doc.id}.md`
 ---
-<Base title={doc.data.title} description={doc.data.description}>
+<Base title={doc.data.title} description={doc.data.description} og={`/og/docs/${doc.id}.png`}>
   <div class="docs-mobile container">
     <button type="button" class="docs-menu" aria-expanded="false" aria-controls="docs-sidebar" data-docs-menu>
       <Icon name="list" size={15} /> <span>{doc.data.group}</span> <Icon name="chevron-right" size={13} /> <strong>{doc.data.label ?? doc.data.title}</strong>

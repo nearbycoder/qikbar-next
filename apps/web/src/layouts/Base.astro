@@ -5,9 +5,10 @@ import Icon from '../components/Icon.astro'
 interface Props {
   title?: string
   description?: string
-  wide?: boolean
+  /** Path of this page's Open Graph image, e.g. `/og/docs/views.png`. */
+  og?: string
 }
-const { title, description = 'Qikbar is a free, open-source ⌘K command bar for any web app: search, routing, actions, extensions and AI in one tiny, themeable package.' } = Astro.props
+const { title, description = 'Qikbar is a free, open-source ⌘K command bar for any web app: search, routing, actions, extensions and AI in one tiny, themeable package.', og } = Astro.props
 const fullTitle = title ? `${title} · Qikbar` : 'Qikbar: the open-source command bar for any web app'
 const path = Astro.url.pathname
 const nav = [
@@ -19,6 +20,9 @@ const nav = [
 ]
 const canonical = new URL(path, Astro.site)
 const clean = path.replace(/\/$/, '') || '/'
+const OG_PAGES: Record<string, string> = { '/': '/og/index.png', '/extensions': '/og/extensions.png', '/themes': '/og/themes.png', '/playground': '/og/playground.png' }
+const ogImage = new URL(og ?? OG_PAGES[clean] ?? '/og/index.png', Astro.site).href
+const ogAlt = title ? `${title} · Qikbar, the open-source command bar` : 'Qikbar: the open-source command bar for any web app'
 const active = nav
   .filter((n) => clean === n.href || clean.startsWith(`${n.href}/`))
   .sort((a, b) => b.href.length - a.href.length)[0]?.href
@@ -31,18 +35,30 @@ const active = nav
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
     <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM-friendly documentation" />
+    <meta property="og:site_name" content="Qikbar" />
     <meta property="og:title" content={fullTitle} />
     <meta property="og:description" content={description} />
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={clean.startsWith('/docs') ? 'article' : 'website'} />
     <meta property="og:url" content={canonical} />
-    <meta property="og:image" content={new URL('/og.png', Astro.site)} />
-    <meta property="og:image:width" content="1280" />
-    <meta property="og:image:height" content="672" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:secure_url" content={ogImage} />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={ogAlt} />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:image" content={new URL('/og.png', Astro.site)} />
-    <meta name="theme-color" content="#08090b" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+    <meta name="twitter:image:alt" content={ogAlt} />
+    <meta name="theme-color" content="#08090b" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#fbfbfa" media="(prefers-color-scheme: light)" />
     <script is:inline>
       try {
         const t = localStorage.getItem('theme')
@@ -58,7 +74,7 @@ const active = nav
     <header class="site-header">
       <div class="container inner">
         <a class="logo" href="/" aria-label="Qikbar home">
-          <span class="logo-mark" aria-hidden="true"><Icon name="search" size={15} /></span>
+          <img class="logo-mark" src="/logo.svg" width="28" height="28" alt="" />
           qikbar
         </a>
         <nav class="nav-links" aria-label="Main">
@@ -93,7 +109,7 @@ const active = nav
     <footer class="site-footer">
       <div class="container grid">
         <div>
-          <a class="logo" href="/"><span class="logo-mark" aria-hidden="true"><Icon name="search" size={15} /></span> qikbar</a>
+          <a class="logo" href="/"><img class="logo-mark" src="/logo.svg" width="28" height="28" alt="" /> qikbar</a>
           <p style="max-width: 320px; margin-top: 14px">The open-source command bar for any web app. MIT licensed, free forever.</p>
         </div>
         <div>
