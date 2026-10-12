@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css'
 import Icon from '../components/Icon.astro'
+import interLatin from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url'
 
 interface Props {
   title?: string
@@ -31,6 +32,7 @@ const active = nav
 <html lang="en" class="dark">
   <head>
     <meta charset="utf-8" />
+    <link rel="preload" href={interLatin} as="font" type="font/woff2" crossorigin />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{fullTitle}</title>
     <meta name="description" content={description} />
@@ -57,25 +59,14 @@ const active = nav
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
     <meta name="twitter:image:alt" content={ogAlt} />
-    <meta name="theme-color" content="#08090b" media="(prefers-color-scheme: dark)" />
-    <meta name="theme-color" content="#fbfbfa" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#08090b" />
     <script is:inline>
       try {
         const t = localStorage.getItem('theme')
         const dark = t ? t === 'dark' : true
         document.documentElement.classList.toggle('dark', dark)
         document.documentElement.classList.toggle('light', !dark)
-      } catch {}
-      // iOS Safari briefly draws the restored page shifted up under its toolbar on reload.
-      // Restore scroll ourselves, and only when the reader wasn't at the top.
-      try {
-        history.scrollRestoration = 'manual'
-        const key = 'scroll:' + location.pathname
-        addEventListener('pagehide', () => sessionStorage.setItem(key, String(Math.round(scrollY))))
-        const nav = performance.getEntriesByType('navigation')[0]
-        const y = Number(sessionStorage.getItem(key))
-        if (y > 0 && !location.hash && nav && (nav.type === 'reload' || nav.type === 'back_forward'))
-          addEventListener('DOMContentLoaded', () => requestAnimationFrame(() => scrollTo(0, y)), { once: true })
+        if (!dark) document.querySelector('meta[name="theme-color"]').content = '#fbfbfa'
       } catch {}
     </script>
     <slot name="head" />
@@ -174,6 +165,7 @@ const active = nav
         document.documentElement.classList.toggle('light', !dark)
         document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
         localStorage.setItem('theme', dark ? 'dark' : 'light')
+        document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.setAttribute('content', dark ? '#08090b' : '#fbfbfa')
       })
 
       // Copy buttons on code blocks.

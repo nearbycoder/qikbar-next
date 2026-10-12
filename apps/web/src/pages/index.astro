@@ -3,7 +3,8 @@ import Base from '../layouts/Base.astro'
 import CodeTabs from '../components/CodeTabs.astro'
 import Icon from '../components/Icon.astro'
 import ExtIcon from '../components/ExtIcon.astro'
-import { presets } from '@qikbar/qikbar/theme'
+import { css as qikbarCss, presets } from '@qikbar/qikbar/theme'
+import heroBarHtml from '../data/hero-bar.html?raw'
 import prompt from '../../public/prompt.txt?raw'
 
 const usage = [
@@ -182,6 +183,8 @@ const gallery = catalog.map((c) => ({ title: c.extension.title, icon: c.extensio
 ---
 
 <Base>
+  <!-- Ship the bar's styles with the page, so the server-rendered hero bar below is styled on first paint -->
+  <style is:inline id="qikbar-styles" slot="head" set:html={qikbarCss}></style>
   <section class="hero">
     <div class="glow" aria-hidden="true"></div>
     <div class="container hero-inner">
@@ -204,7 +207,13 @@ const gallery = catalog.map((c) => ({ title: c.extension.title, icon: c.extensio
           <div class="window-title">acme.app</div>
         </div>
         <div class="window-body">
-          <div id="hero-bar" class="hero-bar"></div>
+          <div id="hero-bar" class="hero-bar">
+            <!-- A static copy of the bar at rest, replaced the moment the real one mounts -->
+            <div class="hero-bar-static" aria-hidden="true" inert set:html={heroBarHtml} />
+          </div>
+          <script is:inline>
+            document.querySelector('.hero-bar-static .qb-root').dataset.qbAppearance = document.documentElement.classList.contains('light') ? 'light' : 'dark'
+          </script>
         </div>
       </div>
       <div class="demo-controls">
@@ -590,6 +599,7 @@ const gallery = catalog.map((c) => ({ title: c.extension.title, icon: c.extensio
   .window-body { padding: 36px clamp(12px, 5vw, 64px) 44px;
     background: radial-gradient(circle at 20% 0%, color-mix(in srgb, var(--brand) 8%, transparent), transparent 50%), repeating-linear-gradient(135deg, transparent 0 14px, color-mix(in srgb, var(--text) 1.6%, transparent) 14px 15px); }
   .hero-bar { max-width: 680px; margin: 0 auto; min-height: 478px; }
+  .hero-bar-static:not(:only-child) { display: none; }
   .hero-bar :global(.qb-dialog) { box-shadow: 0 30px 80px -20px rgba(0,0,0,.5), 0 0 0 1px var(--border); }
 
   .demo-controls { max-width: 860px; margin: 18px auto 0; display: flex; flex-direction: column; gap: 12px; align-items: center; }
