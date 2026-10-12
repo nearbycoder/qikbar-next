@@ -27,3 +27,5 @@ jobs:
         run: bun run --filter @qikbar/web build
       - name: Build React example
         run: bun run --filter @qikbar/example-react build
+      - name: Typecheck video
+        run: bun run --filter @qikbar/video typecheck

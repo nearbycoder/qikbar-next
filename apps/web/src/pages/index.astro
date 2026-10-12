@@ -232,6 +232,19 @@ const gallery = catalog.map((c) => ({ title: c.extension.title, icon: c.extensio
     {['React', 'Next.js', 'Vue', 'Svelte', 'Astro', 'Angular', 'Solid', 'Remix', 'HTMX', 'Plain HTML'].map((f) => <span class="fw">{f}</span>)}
   </section>
 
+  <section class="film-section container" aria-label="Product film">
+    <div class="film" id="film" data-state="idle">
+      <video id="film-video" src="/video/qikbar.mp4" poster="/video/poster.jpg" preload="none" playsinline width="1920" height="1080"></video>
+      <button class="film-play" type="button" id="film-play" aria-label="Play the Qikbar product film, with sound">
+        <span class="film-orb" aria-hidden="true">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.14v13.72a1 1 0 0 0 1.52.85l10.6-6.86a1 1 0 0 0 0-1.7L9.52 4.29A1 1 0 0 0 8 5.14z" /></svg>
+        </span>
+        <span class="film-label"><strong>Watch the film</strong><span>1:16 · sound on</span></span>
+      </button>
+    </div>
+    <p class="film-caption">Search, live data, actions, views, AI, extensions and themes, in 76 seconds.</p>
+  </section>
+
   <section class="section container steps-section">
     <span class="eyebrow">How it works</span>
     <h2 class="section-title">From zero to ⌘K in three steps.</h2>
@@ -432,6 +445,24 @@ const gallery = catalog.map((c) => ({ title: c.extension.title, icon: c.extensio
 
   const catalogNames = catalog.slice(0, 8).map((c) => c.extension.name)
 
+  const film = document.getElementById('film')!
+  const filmVideo = document.getElementById('film-video') as HTMLVideoElement
+  document.getElementById('film-play')!.addEventListener('click', () => {
+    film.dataset.state = 'playing'
+    filmVideo.controls = true
+    filmVideo.muted = false
+    filmVideo.play().catch(() => {
+      film.dataset.state = 'idle'
+      filmVideo.controls = false
+    })
+  })
+  filmVideo.addEventListener('ended', () => {
+    film.dataset.state = 'idle'
+    filmVideo.controls = false
+    filmVideo.currentTime = 0
+    filmVideo.load()
+  })
+
   const hero = createQikbar({
     inline: '#hero-bar',
     hotkey: false,
@@ -571,6 +602,30 @@ const gallery = catalog.map((c) => ({ title: c.extension.title, icon: c.extensio
 
   .frameworks { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 26px; margin-top: 64px; color: var(--subtle); font-size: 14px; }
   .frameworks .fw { color: var(--muted); font-weight: 550; letter-spacing: -0.01em; font-size: 15px; }
+
+  .film-section { margin-top: 96px; }
+  .film { position: relative; max-width: 1040px; margin: 0 auto; aspect-ratio: 16 / 9; border-radius: 20px; overflow: hidden; background: #08090b;
+    border: 1px solid var(--border-strong); box-shadow: 0 50px 140px -50px color-mix(in srgb, var(--brand) 45%, transparent), var(--shadow); isolation: isolate; }
+  .film::before { content: ''; position: absolute; inset: -1px; border-radius: inherit; padding: 1px; pointer-events: none; z-index: 2;
+    background: linear-gradient(140deg, color-mix(in srgb, var(--brand) 60%, transparent), transparent 35%, transparent 65%, color-mix(in srgb, var(--brand-2) 50%, transparent));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor; mask-composite: exclude; transition: opacity .4s; }
+  .film video { display: block; width: 100%; height: 100%; object-fit: cover; }
+  .film-play { position: absolute; inset: 0; z-index: 1; display: flex; align-items: flex-end; justify-content: center; padding-bottom: 7%; gap: 14px; border: 0; cursor: pointer; color: #fff;
+    background: linear-gradient(180deg, transparent 45%, rgba(4, 6, 8, .55)); font: inherit; transition: opacity .35s, visibility .35s; }
+  .film-orb { width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; padding-left: 4px; color: #04140d;
+    background: linear-gradient(180deg, #6ee7b7, #10b981); box-shadow: 0 0 0 8px rgba(52, 211, 153, .14), 0 16px 40px -8px rgba(16, 185, 129, .7);
+    transition: transform .25s cubic-bezier(.2, .9, .3, 1.4), box-shadow .25s; animation: film-pulse 2.6s ease-out infinite; }
+  .film-label { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; text-align: left; line-height: 1.25; text-shadow: 0 2px 12px rgba(0,0,0,.5); }
+  .film-label strong { font-size: 18px; letter-spacing: -0.01em; }
+  .film-label span { font-size: 13.5px; color: rgba(255,255,255,.72); }
+  .film-play:hover .film-orb, .film-play:focus-visible .film-orb { transform: scale(1.08); box-shadow: 0 0 0 12px rgba(52, 211, 153, .18), 0 20px 50px -8px rgba(16, 185, 129, .85); }
+  .film-play:focus-visible { outline: none; }
+  .film[data-state='playing'] .film-play { opacity: 0; visibility: hidden; }
+  .film[data-state='playing']::before { opacity: .35; }
+  .film-caption { text-align: center; color: var(--subtle); font-size: 14px; margin: 18px 0 0; }
+  @keyframes film-pulse { 0%, 100% { box-shadow: 0 0 0 8px rgba(52, 211, 153, .14), 0 16px 40px -8px rgba(16, 185, 129, .7); } 50% { box-shadow: 0 0 0 16px rgba(52, 211, 153, 0), 0 16px 40px -8px rgba(16, 185, 129, .7); } }
+  @media (prefers-reduced-motion: reduce) { .film-orb { animation: none; } }
+  @media (max-width: 600px) { .film { border-radius: 14px; } .film-orb { width: 48px; height: 48px; } .film-label strong { font-size: 15px; } .film-label span { font-size: 12px; } }
 
   .section { margin-top: 140px; }
   .features { margin-top: 44px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }

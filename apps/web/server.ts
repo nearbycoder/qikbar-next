@@ -42,6 +42,20 @@ Bun.serve({
     const headers: Record<string, string> = {}
     if (TYPES[ext]) headers['content-type'] = TYPES[ext]
     headers['cache-control'] = hit.path.includes('/_astro/') ? 'public, max-age=31536000, immutable' : 'public, max-age=300'
+    headers['accept-ranges'] = 'bytes'
+    // Byte ranges, so browsers can stream and seek video (Safari requires this)
+    const range = req.headers.get('range')?.match(/^bytes=(\d*)-(\d*)$/)
+    if (range && (range[1] || range[2])) {
+      const size = hit.file.size
+      let start = range[1] ? Number(range[1]) : size - Number(range[2])
+      let end = range[1] && range[2] ? Number(range[2]) : size - 1
+      start = Math.max(0, start)
+      end = Math.min(end, size - 1)
+      if (start > end) return new Response(null, { status: 416, headers: { 'content-range': `bytes */${size}` } })
+      headers['content-range'] = `bytes ${start}-${end}/${size}`
+      headers['content-type'] ??= hit.file.type
+      return new Response(hit.file.slice(start, end + 1), { status: 206, headers })
+    }
     return new Response(hit.file, { headers })
   },
 })
