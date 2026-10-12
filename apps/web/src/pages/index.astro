@@ -2,6 +2,7 @@
 import Base from '../layouts/Base.astro'
 import CodeTabs from '../components/CodeTabs.astro'
 import Icon from '../components/Icon.astro'
+import ExtIcon from '../components/ExtIcon.astro'
 import { presets } from '@qikbar/qikbar/theme'
 import prompt from '../../public/prompt.txt?raw'
 
@@ -334,7 +335,7 @@ const gallery = catalog.map((c) => ({ title: c.extension.title, icon: c.extensio
       <div class="ext-grid">
         {gallery.slice(0, 8).map((g) => (
           <button type="button" class="ext" data-gallery-try={g.try}>
-            <span class="ext-ic">{/^https?:/.test(g.icon) ? <img src={g.icon} alt="" width="16" height="16" loading="lazy" /> : g.icon.length <= 4 ? g.icon : <Icon name={g.icon as any} size={16} />}</span>
+            <ExtIcon class="ext-ic" icon={g.icon} size={16} />
             <div><strong>{g.title}</strong><span>{g.desc.split('.')[0]}</span></div>
           </button>
         ))}
@@ -602,9 +603,9 @@ const gallery = catalog.map((c) => ({ title: c.extension.title, icon: c.extensio
   .ext-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 26px 0 30px; }
   .ext { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--panel); text-align: left; font: inherit; color: inherit; cursor: pointer; transition: border-color .15s, transform .15s; }
   .ext:hover { border-color: var(--brand); transform: translateY(-1px); }
-  .ext-ic { width: 28px; height: 28px; flex-shrink: 0; border-radius: 8px; display: grid; place-items: center; background: var(--bg-soft); border: 1px solid var(--border); color: var(--brand); font-size: 15px; }
-  .ext strong { display: block; font-size: 14px; }
-  .ext span { font-size: 13px; color: var(--muted); }
+  .ext :global(.ext-ic) { width: 28px; height: 28px; flex-shrink: 0; border-radius: 8px; display: grid; place-items: center; background: var(--bg-soft); border: 1px solid var(--border); color: var(--brand); font-size: 15px; }
+  .ext strong { display: block; font-size: 14px; line-height: 1.35; }
+  .ext > div > span { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-top: 3px; font-size: 13px; line-height: 1.45; color: var(--muted); }
   .ext-code { min-width: 0; }
 
   .presets { margin-top: 40px; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }

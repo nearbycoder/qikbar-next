@@ -2,6 +2,7 @@
 import { Code } from 'astro:components'
 import Base from '../layouts/Base.astro'
 import Icon from '../components/Icon.astro'
+import ExtIcon from '../components/ExtIcon.astro'
 import { catalog, CATEGORIES } from '../data/extensions'
 
 const sources = import.meta.glob<string>('../extensions/*.ts', { query: '?raw', import: 'default', eager: true })
@@ -16,7 +17,7 @@ const builtIns = [
   { icon: 'key', title: 'AI settings', fn: 'byok.settings()', body: 'Let users bring their own Anthropic, OpenAI or Gemini key.', try: 'ai settings' },
 ]
 
-const iconOf = (icon: unknown) => (typeof icon === 'string' && /^https?:/.test(icon) ? { url: icon } : typeof icon === 'string' && icon.length <= 4 ? { emoji: icon } : { name: (icon as string) ?? 'puzzle' })
+const repo = 'https://github.com/nearbycoder/qikbar-next/blob/main/apps/web/src/extensions'
 ---
 
 <Base title="Extensions" description="Built-in and community extensions for Qikbar: commands, sources, AI tools and preferences in portable packages.">
@@ -43,36 +44,36 @@ const iconOf = (icon: unknown) => (typeof icon === 'string' && /^https?:/.test(i
     </div>
     <p class="none" data-none hidden>No extensions match.</p>
     <div class="cards">
-      {catalog.map((c) => {
-        const ic = iconOf(c.extension.icon)
-        return (
-          <article class="card ext" data-ext={c.extension.name} data-category={c.category} data-text={`${c.extension.title} ${c.extension.description} ${c.tags.join(' ')} ${c.category}`.toLowerCase()}>
-            <div class="ext-head">
-              <div class="ext-icon">
-                {'url' in ic ? <img src={ic.url} alt="" width="20" height="20" loading="lazy" /> : 'emoji' in ic ? <span>{ic.emoji}</span> : <Icon name={ic.name as any} size={18} />}
+      {catalog.map((c) => (
+        <article class="ext" data-ext={c.extension.name} data-category={c.category} data-text={`${c.extension.title} ${c.extension.description} ${c.tags.join(' ')} ${c.category}`.toLowerCase()}>
+          <div class="ext-top">
+            <ExtIcon class="tile" icon={c.extension.icon} size={22} />
+            <div class="titles">
+              <h3>{c.extension.title}</h3>
+              <div class="meta">
+                <span class="cat">{c.category}</span>
+                {c.uses && <><span class="dot" aria-hidden="true"></span><span>{c.uses}</span></>}
               </div>
-              <div>
-                <h3>{c.extension.title}</h3>
-                <code>{c.file}</code>
-              </div>
-              <button class="btn install" type="button" data-install={c.extension.name} aria-pressed="false">
-                <span class="when-off">Install</span><span class="when-on"><Icon name="check" size={14} /> Installed</span>
-              </button>
             </div>
-            <p>{c.extension.description}</p>
-            <div class="tags"><span class="cat">{c.category}</span>{c.uses && <span class="uses">{c.uses}</span>}{c.tags.map((t) => <span>{t}</span>)}</div>
-            <div class="ext-foot">
-              <button type="button" class="link" data-try={c.try}><Icon name="search" size={13} /> Try “{c.try}”</button>
-              <details>
-                <summary><Icon name="code" size={13} /> Source</summary>
-              </details>
-            </div>
-            <div class="source" hidden>
-              <Code code={sourceOf(c.file)} lang="ts" themes={{ light: 'github-light', dark: 'github-dark-dimmed' }} defaultColor={false} />
-            </div>
-          </article>
-        )
-      })}
+            <button class="install" type="button" data-install={c.extension.name} aria-pressed="false" aria-label={`Install ${c.extension.title}`}>
+              <span class="when-off"><Icon name="plus" size={14} /> Install</span>
+              <span class="when-on"><Icon name="check" size={14} /> Installed</span>
+            </button>
+          </div>
+          <p class="desc">{c.extension.description}</p>
+          <ul class="features" aria-label="API features used">
+            {c.tags.map((t) => <li>{t}</li>)}
+          </ul>
+          <div class="ext-actions">
+            <button type="button" class="try" data-try={c.try}>
+              <Icon name="search" size={14} />
+              <span class="q">{c.try}</span>
+              <span class="go">Try it <Icon name="arrow-right" size={13} /></span>
+            </button>
+            <button type="button" class="view" data-source={c.file} aria-haspopup="dialog"><Icon name="code" size={14} /> Source</button>
+          </div>
+        </article>
+      ))}
     </div>
   </section>
 
@@ -80,17 +81,21 @@ const iconOf = (icon: unknown) => (typeof icon === 'string' && /^https?:/.test(i
     <h2>Built in <span>Import from <code>@qikbar/qikbar/extensions</code>. Already installed on this site.</span></h2>
     <div class="cards small">
       {builtIns.map((b) => (
-        <article class="card ext">
-          <div class="ext-head">
-            <div class="ext-icon"><Icon name={b.icon as any} size={18} /></div>
-            <div>
+        <article class="ext builtin">
+          <div class="ext-top">
+            <ExtIcon class="tile" icon={b.icon} size={20} />
+            <div class="titles">
               <h3>{b.title}</h3>
-              <code>{b.fn}</code>
+              <code class="fn">{b.fn}</code>
             </div>
           </div>
-          <p>{b.body}</p>
-          <div class="ext-foot">
-            <button type="button" class="link" data-try={b.try}><Icon name="search" size={13} /> Try “{b.try}”</button>
+          <p class="desc">{b.body}</p>
+          <div class="ext-actions">
+            <button type="button" class="try" data-try={b.try}>
+              <Icon name="search" size={14} />
+              <span class="q">{b.try}</span>
+              <span class="go">Try it <Icon name="arrow-right" size={13} /></span>
+            </button>
           </div>
         </article>
       ))}
@@ -109,6 +114,25 @@ const iconOf = (icon: unknown) => (typeof icon === 'string' && /^https?:/.test(i
       </div>
     </div>
   </section>
+
+  <dialog class="source-dialog" data-source-dialog aria-labelledby="source-title">
+    <div class="sd-head">
+      <Icon name="file-text" size={15} />
+      <strong id="source-title" data-source-title></strong>
+      <div class="sd-tools">
+        <button type="button" class="sd-btn" data-source-copy><Icon name="copy" size={13} /> Copy</button>
+        <a class="sd-btn" data-source-link href="#" target="_blank" rel="noopener"><Icon name="github" size={13} /> GitHub</a>
+        <button type="button" class="sd-btn icon" data-source-close aria-label="Close" autofocus><Icon name="x" size={15} /></button>
+      </div>
+    </div>
+    <div class="sd-body">
+      {catalog.map((c) => (
+        <div class="sd-file" data-file={c.file} data-href={`${repo}/${c.file}`} hidden>
+          <Code code={sourceOf(c.file)} lang="ts" themes={{ light: 'github-light', dark: 'github-dark-dimmed' }} defaultColor={false} />
+        </div>
+      ))}
+    </div>
+  </dialog>
 </Base>
 
 <script>
@@ -116,7 +140,11 @@ const iconOf = (icon: unknown) => (typeof icon === 'string' && /^https?:/.test(i
 
   const sync = () => {
     const installed = new Set(installedNames())
-    document.querySelectorAll<HTMLButtonElement>('[data-install]').forEach((b) => b.setAttribute('aria-pressed', String(installed.has(b.dataset.install!))))
+    document.querySelectorAll<HTMLButtonElement>('[data-install]').forEach((b) => {
+      const on = installed.has(b.dataset.install!)
+      b.setAttribute('aria-pressed', String(on))
+      b.closest('.ext')?.classList.toggle('installed', on)
+    })
   }
   sync()
 
@@ -164,12 +192,28 @@ const iconOf = (icon: unknown) => (typeof icon === 'string' && /^https?:/.test(i
   )
   search.addEventListener('input', apply)
 
-  document.querySelectorAll<HTMLDetailsElement>('.ext details').forEach((d) =>
-    d.addEventListener('toggle', () => {
-      const src = d.closest('.ext')!.querySelector<HTMLElement>('.source')!
-      src.hidden = !d.open
+  // Source viewer
+  const dialog = document.querySelector<HTMLDialogElement>('[data-source-dialog]')!
+  const files = [...dialog.querySelectorAll<HTMLElement>('.sd-file')]
+  let current: HTMLElement | undefined
+  document.querySelectorAll<HTMLButtonElement>('[data-source]').forEach((b) =>
+    b.addEventListener('click', () => {
+      current = files.find((f) => f.dataset.file === b.dataset.source)
+      files.forEach((f) => (f.hidden = f !== current))
+      dialog.querySelector('[data-source-title]')!.textContent = b.dataset.source!
+      dialog.querySelector<HTMLAnchorElement>('[data-source-link]')!.href = current?.dataset.href ?? '#'
+      dialog.showModal()
+      dialog.querySelector('.sd-body')!.scrollTop = 0
     }),
   )
+  dialog.querySelector('[data-source-close]')!.addEventListener('click', () => dialog.close())
+  dialog.addEventListener('click', (e) => {
+    if (e.target === dialog) dialog.close()
+  })
+  dialog.querySelector('[data-source-copy]')!.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(current?.querySelector('pre')?.innerText ?? '')
+    window.qikbar.toast({ title: 'Source copied', style: 'success' })
+  })
 </script>
 
 <style>
@@ -192,26 +236,59 @@ const iconOf = (icon: unknown) => (typeof icon === 'string' && /^https?:/.test(i
   .ext[hidden] { display: none; }
   .submit { padding: 28px 32px; display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; background: radial-gradient(400px 160px at 0% 0%, color-mix(in srgb, var(--brand) 12%, transparent), transparent 70%), var(--panel); }
   .submit p { color: var(--muted); margin: 6px 0 0; }
-  .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
   .cards.small { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  @media (max-width: 900px) { .cards, .cards.small { grid-template-columns: 1fr; } }
-  .ext { padding: 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
-  .ext-head { display: flex; gap: 12px; align-items: center; }
-  .ext-icon { width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; background: var(--bg-soft); border: 1px solid var(--border); color: var(--brand); font-size: 20px; flex-shrink: 0; }
-  .ext h3 { margin: 0; font-size: 16px; }
-  .ext-head code { font-size: 12px; color: var(--subtle); }
-  .ext p { margin: 0; color: var(--muted); font-size: 14.5px; }
-  .install { margin-left: auto; height: 32px; font-size: 13px; padding: 0 12px; }
-  .install .when-on { display: none; align-items: center; gap: 6px; }
-  .install[aria-pressed='true'] { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
+  @media (max-width: 960px) { .cards.small { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  @media (max-width: 720px) { .cards, .cards.small { grid-template-columns: 1fr; } }
+
+  .ext { position: relative; display: flex; flex-direction: column; gap: 14px; min-width: 0; padding: 22px; border-radius: 16px; border: 1px solid var(--border); background: linear-gradient(180deg, color-mix(in srgb, var(--text) 2%, var(--panel)), var(--panel)); transition: border-color .2s, transform .2s, box-shadow .2s; }
+  .ext:hover { border-color: var(--border-strong); transform: translateY(-2px); box-shadow: var(--shadow); }
+  .ext.installed { border-color: color-mix(in srgb, var(--brand) 40%, transparent); }
+  .ext.installed::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: radial-gradient(300px 120px at 0% 0%, color-mix(in srgb, var(--brand) 9%, transparent), transparent 70%); }
+
+  .ext-top { display: flex; align-items: center; gap: 14px; min-width: 0; }
+  .ext :global(.tile) { width: 46px; height: 46px; border-radius: 13px; background: linear-gradient(145deg, color-mix(in srgb, var(--brand) 16%, var(--bg-soft)), var(--bg-soft)); border: 1px solid color-mix(in srgb, var(--brand) 22%, var(--border)); box-shadow: inset 0 1px 0 color-mix(in srgb, #fff 10%, transparent); font-size: 22px; }
+  .titles { display: flex; flex-direction: column; gap: 3px; min-width: 0; flex: 1; }
+  .ext h3 { margin: 0; font-size: 16.5px; letter-spacing: -0.01em; line-height: 1.25; }
+  .meta { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--subtle); white-space: nowrap; overflow: hidden; }
+  .meta .cat { color: var(--brand); font-weight: 550; }
+  .meta .dot { width: 3px; height: 3px; border-radius: 50%; background: var(--subtle); flex-shrink: 0; }
+  .fn { font-size: 12.5px; color: var(--subtle); }
+
+  .desc { margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.55; }
+  .features { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+  .features li { font: 500 11.5px var(--mono); padding: 3px 8px; border-radius: 6px; background: color-mix(in srgb, var(--text) 4%, transparent); color: var(--muted); }
+
+  .install { flex-shrink: 0; display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border-radius: 9px; border: 1px solid var(--border-strong); background: var(--panel); color: var(--text); font: 500 13px var(--font); cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+  .install:hover { border-color: var(--brand); }
+  .install span { display: inline-flex; align-items: center; gap: 6px; }
+  .install .when-on { display: none; }
+  .install[aria-pressed='true'] { border-color: transparent; background: var(--brand-soft); color: var(--brand); }
   .install[aria-pressed='true'] .when-on { display: inline-flex; }
   .install[aria-pressed='true'] .when-off { display: none; }
-  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
-  .tags span { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--bg-soft); border: 1px solid var(--border); color: var(--muted); font-family: var(--mono); }
-  .ext-foot { display: flex; gap: 16px; align-items: center; margin-top: auto; padding-top: 4px; }
-  .link, summary { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 0; color: var(--muted); font: 500 13px var(--font); cursor: pointer; list-style: none; }
-  summary::-webkit-details-marker { display: none; }
-  .link:hover, summary:hover { color: var(--brand); }
-  .source { margin-top: 4px; }
-  .source :global(.astro-code) { max-height: 420px; font-size: 12.5px; }
+
+  .ext-actions { display: flex; gap: 8px; margin-top: auto; padding-top: 14px; border-top: 1px solid var(--border); }
+  .try { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; height: 38px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-soft); color: var(--subtle); font: 13.5px var(--font); cursor: pointer; text-align: left; transition: border-color .15s, color .15s; }
+  .try .q { flex: 1; min-width: 0; color: var(--text); font-family: var(--mono); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .try .go { display: inline-flex; align-items: center; gap: 4px; color: var(--subtle); font-weight: 550; font-size: 12.5px; white-space: nowrap; transition: color .15s, gap .15s; }
+  .try:hover { border-color: var(--brand); }
+  .try:hover .go { color: var(--brand); gap: 7px; }
+  .view { display: inline-flex; align-items: center; gap: 7px; height: 38px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: var(--muted); font: 500 13px var(--font); cursor: pointer; white-space: nowrap; }
+  .view:hover { color: var(--text); border-color: var(--border-strong); }
+
+  .builtin { padding: 20px; }
+  .builtin :global(.tile) { width: 40px; height: 40px; border-radius: 11px; }
+
+  .source-dialog { width: min(860px, calc(100vw - 32px)); max-height: min(80vh, 760px); padding: 0; border: 1px solid var(--border-strong); border-radius: 16px; background: var(--panel); color: var(--text); box-shadow: 0 30px 80px -20px rgba(0,0,0,.6); overflow: hidden; }
+  .source-dialog[open] { display: flex; flex-direction: column; animation: sd-in .18s ease-out; }
+  .source-dialog::backdrop { background: rgba(0,0,0,.5); backdrop-filter: blur(4px); }
+  @keyframes sd-in { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+  .sd-head { display: flex; align-items: center; gap: 10px; padding: 12px 12px 12px 18px; border-bottom: 1px solid var(--border); color: var(--muted); }
+  .sd-head strong { color: var(--text); font: 600 14px var(--mono); }
+  .sd-tools { margin-left: auto; display: flex; gap: 6px; }
+  .sd-btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-soft); color: var(--muted); font: 500 12.5px var(--font); text-decoration: none; cursor: pointer; }
+  .sd-btn:hover { color: var(--text); }
+  .sd-btn.icon { padding: 0 7px; }
+  .sd-body { overflow: auto; }
+  .sd-body :global(.astro-code) { margin: 0; border: 0; border-radius: 0; font-size: 12.5px; padding: 18px 20px; }
 </style>

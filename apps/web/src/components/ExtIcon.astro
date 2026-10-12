@@ -1,0 +1,24 @@
+---
+import { icons } from '@qikbar/qikbar/utils'
+import Icon from './Icon.astro'
+
+interface Props {
+  icon: unknown
+  size?: number
+  class?: string
+}
+const { icon, size = 20, class: className } = Astro.props
+const value = typeof icon === 'string' ? icon : 'puzzle'
+const kind = value in icons ? 'icon' : /^(https?:|\/|data:)/.test(value) ? 'url' : 'text'
+---
+<span class:list={['ext-icon', className]} data-kind={kind}>
+  {kind === 'icon' && <Icon name={value as keyof typeof icons} size={size} />}
+  {kind === 'url' && <img src={value} alt="" width={size} height={size} loading="lazy" />}
+  {kind === 'text' && <span class="emoji">{value}</span>}
+</span>
+
+<style>
+  .ext-icon { display: inline-grid; place-items: center; flex-shrink: 0; color: var(--brand); }
+  .ext-icon img { border-radius: 4px; object-fit: contain; }
+  .emoji { font-size: 1.15em; line-height: 1; }
+</style>
