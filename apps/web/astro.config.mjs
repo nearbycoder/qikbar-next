@@ -1,7 +1,7 @@
 import { defineConfig } from 'astro/config'
 
 export default defineConfig({
-  site: process.env.SITE_URL ?? 'https://qikbar.com',
+  site: process.env.SITE_URL || 'https://qikbar.com',
   trailingSlash: 'ignore',
   markdown: {
     shikiConfig: {
