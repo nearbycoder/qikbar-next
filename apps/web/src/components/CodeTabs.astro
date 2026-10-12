@@ -1,0 +1,52 @@
+---
+import { Code } from 'astro:components'
+
+interface Tab { label: string; lang: string; code: string }
+interface Props { tabs: Tab[]; id: string }
+const { tabs, id } = Astro.props
+---
+<div class="code-tabs" data-tabs={id}>
+  <div class="tab-list" role="tablist">
+    {tabs.map((t, i) => (
+      <button type="button" role="tab" id={`${id}-tab-${i}`} aria-controls={`${id}-panel-${i}`} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1}>{t.label}</button>
+    ))}
+  </div>
+  {tabs.map((t, i) => (
+    <div class="tab-panel" role="tabpanel" id={`${id}-panel-${i}`} aria-labelledby={`${id}-tab-${i}`} hidden={i !== 0}>
+      <Code code={t.code.trim()} lang={t.lang as any} themes={{ light: 'github-light', dark: 'github-dark-dimmed' }} defaultColor={false} />
+    </div>
+  ))}
+</div>
+
+<style>
+  .code-tabs { border: 1px solid var(--border); border-radius: 14px; background: var(--code-bg); overflow: hidden; }
+  .tab-list { display: flex; gap: 2px; padding: 8px 8px 0; border-bottom: 1px solid var(--border); overflow-x: auto; }
+  .tab-list button { padding: 8px 12px 10px; border: 0; background: none; color: var(--subtle); font: 500 13.5px var(--font); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+  .tab-list button:hover { color: var(--muted); }
+  .tab-list button[aria-selected='true'] { color: var(--text); border-bottom-color: var(--brand); }
+  .tab-panel :global(.astro-code) { border: 0; border-radius: 0; margin: 0; padding: 18px 20px; font-size: 13.5px; }
+</style>
+
+<script>
+  document.querySelectorAll<HTMLElement>('[data-tabs]').forEach((root) => {
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>('[role=tab]')]
+    const panels = [...root.querySelectorAll<HTMLElement>('[role=tabpanel]')]
+    const select = (i: number) => {
+      tabs.forEach((t, j) => {
+        t.setAttribute('aria-selected', String(i === j))
+        t.tabIndex = i === j ? 0 : -1
+      })
+      panels.forEach((p, j) => (p.hidden = i !== j))
+    }
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => select(i))
+      t.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') {
+          const n = (i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length
+          select(n)
+          tabs[n]!.focus()
+        }
+      })
+    })
+  })
+</script>

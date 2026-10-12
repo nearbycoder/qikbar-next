@@ -1,0 +1,145 @@
+---
+import '../styles/global.css'
+import Icon from '../components/Icon.astro'
+
+interface Props {
+  title?: string
+  description?: string
+  wide?: boolean
+}
+const { title, description = 'Qikbar is a free, open-source ⌘K command bar for any web app: search, routing, actions, extensions and AI in one tiny, themeable package.' } = Astro.props
+const fullTitle = title ? `${title} · Qikbar` : 'Qikbar: the open-source command bar for any web app'
+const path = Astro.url.pathname
+const nav = [
+  { href: '/docs', label: 'Docs' },
+  { href: '/extensions', label: 'Extensions' },
+  { href: '/themes', label: 'Themes' },
+  { href: '/docs/ai', label: 'AI' },
+]
+const canonical = new URL(path, Astro.site)
+---
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="LLM-friendly documentation" />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content={canonical} />
+    <meta name="twitter:card" content="summary" />
+    <meta name="theme-color" content="#08090b" />
+    <script is:inline>
+      try {
+        const t = localStorage.getItem('theme')
+        const dark = t ? t === 'dark' : true
+        document.documentElement.classList.toggle('dark', dark)
+        document.documentElement.classList.toggle('light', !dark)
+      } catch {}
+    </script>
+    <slot name="head" />
+  </head>
+  <body>
+    <a class="sr-only" href="#main">Skip to content</a>
+    <header class="site-header">
+      <div class="container inner">
+        <a class="logo" href="/" aria-label="Qikbar home">
+          <span class="logo-mark" aria-hidden="true"><Icon name="search" size={15} /></span>
+          qikbar
+        </a>
+        <nav class="nav-links" aria-label="Main">
+          {nav.map((n) => <a href={n.href} aria-current={path.startsWith(n.href) ? 'page' : undefined}>{n.label}</a>)}
+        </nav>
+        <div class="header-right">
+          <button class="search-trigger" type="button" data-qikbar-open aria-label="Search or ask AI">
+            <Icon name="search" size={15} />
+            <span class="label">Search or ask AI…</span>
+            <span class="kbd" data-mod-k>⌘K</span>
+          </button>
+          <button class="icon-btn theme-toggle" type="button" aria-label="Toggle dark mode" data-theme-toggle>
+            <span class="moon"><Icon name="moon" /></span>
+            <span class="sun"><Icon name="sun" /></span>
+          </button>
+          <a class="icon-btn" href="https://github.com/nearbycoder/qikbar-next" aria-label="GitHub"><Icon name="github" /></a>
+        </div>
+      </div>
+    </header>
+    <main id="main">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="container grid">
+        <div>
+          <a class="logo" href="/"><span class="logo-mark" aria-hidden="true"><Icon name="search" size={15} /></span> qikbar</a>
+          <p style="max-width: 320px; margin-top: 14px">The open-source command bar for any web app. MIT licensed, free forever.</p>
+        </div>
+        <div>
+          <h4>Product</h4>
+          <ul>
+            <li><a href="/docs">Documentation</a></li>
+            <li><a href="/extensions">Extensions</a></li>
+            <li><a href="/themes">Theme builder</a></li>
+            <li><a href="/docs/ai">AI</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Developers</h4>
+          <ul>
+            <li><a href="/docs/quick-start">Quick start</a></li>
+            <li><a href="/docs/api">API reference</a></li>
+            <li><a href="/docs/ai-setup">Set up with AI</a></li>
+            <li><a href="/llms.txt">llms.txt</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Community</h4>
+          <ul>
+            <li><a href="https://github.com/nearbycoder/qikbar-next">GitHub</a></li>
+            <li><a href="https://www.npmjs.com/package/qikbar">npm</a></li>
+            <li><a href="https://github.com/nearbycoder/qikbar-next/blob/main/CONTRIBUTING.md">Contributing</a></li>
+            <li><a href="https://github.com/nearbycoder/qikbar-next/discussions">Discussions</a></li>
+          </ul>
+        </div>
+      </div>
+    </footer>
+    <script>
+      import '../scripts/site-bar'
+      import { formatHotkey, isMac } from 'qikbar'
+
+      const label = formatHotkey('mod+k')[0]!.join(isMac ? '' : ' ')
+      document.querySelectorAll('[data-mod-k]').forEach((el) => (el.textContent = label))
+
+      document.querySelector('[data-theme-toggle]')?.addEventListener('click', () => {
+        const dark = !document.documentElement.classList.contains('dark')
+        document.documentElement.classList.toggle('dark', dark)
+        document.documentElement.classList.toggle('light', !dark)
+        document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+        localStorage.setItem('theme', dark ? 'dark' : 'light')
+      })
+
+      // Copy buttons on code blocks.
+      document.querySelectorAll<HTMLPreElement>('pre.astro-code').forEach((pre) => {
+        if (pre.parentElement?.classList.contains('code-wrap')) return
+        const wrap = document.createElement('div')
+        wrap.className = 'code-wrap'
+        pre.replaceWith(wrap)
+        wrap.append(pre)
+        const btn = document.createElement('button')
+        btn.className = 'copy-btn'
+        btn.type = 'button'
+        btn.textContent = 'Copy'
+        btn.addEventListener('click', async () => {
+          await navigator.clipboard.writeText(pre.innerText)
+          btn.textContent = 'Copied'
+          setTimeout(() => (btn.textContent = 'Copy'), 1200)
+        })
+        wrap.append(btn)
+      })
+    </script>
+  </body>
+</html>

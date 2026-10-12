@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Qikbar script-tag example</title>
+  </head>
+  <body style="font-family: system-ui; padding: 40px">
+    <nav aria-label="Site">
+      <a href="#/">Home</a> · <a href="#/pricing">Pricing</a> · <a href="#/blog">Blog</a>
+    </nav>
+    <p>No build step. Press <kbd>⌘K</kbd> / <kbd>Ctrl K</kbd>.</p>
+    <button data-qikbar-open>Search…</button>
+    <button data-qikbar="Say hello" data-qikbar-icon="sparkles" onclick="alert('Hello!')">Hello</button>
+
+    <!-- In production: https://unpkg.com/qikbar/dist/qikbar.global.js -->
+    <script src="../../packages/qikbar/dist/qikbar.global.js"></script>
+    <script>
+      const { createQikbar, extensions } = Qikbar
+      window.bar = createQikbar({
+        autoIndex: true,
+        extensions: [extensions.calculator(), extensions.themeSwitcher()],
+        commands: [{ title: 'Contact support', icon: 'mail', url: 'mailto:help@example.com' }],
+      })
+    </script>
+  </body>
+</html>

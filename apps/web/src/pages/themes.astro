@@ -1,0 +1,269 @@
+---
+import Base from '../layouts/Base.astro'
+import Icon from '../components/Icon.astro'
+import { presets } from 'qikbar/theme'
+
+const colorKeys = [
+  ['accent', 'Accent'],
+  ['highlight', 'Match highlight'],
+  ['bg', 'Background'],
+  ['bgElevated', 'Elevated'],
+  ['fg', 'Text'],
+  ['fgMuted', 'Muted text'],
+  ['fgSubtle', 'Subtle text'],
+  ['selection', 'Selection'],
+  ['border', 'Border'],
+  ['overlay', 'Overlay'],
+]
+const sizeKeys = [
+  ['radius', 'Radius', 0, 28],
+  ['radiusItem', 'Row radius', 0, 20],
+  ['rowHeight', 'Row height', 30, 60],
+  ['inputHeight', 'Input height', 44, 72],
+  ['inputFontSize', 'Input font', 13, 22],
+  ['fontSize', 'Font size', 12, 16],
+  ['backdropBlur', 'Blur', 0, 40],
+]
+const fonts = [
+  ['System', 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'],
+  ['Inter', '"Inter Variable", ui-sans-serif, system-ui, sans-serif'],
+  ['Serif', 'ui-serif, Georgia, Cambria, "Times New Roman", serif'],
+  ['Mono', '"JetBrains Mono Variable", ui-monospace, SFMono-Regular, Menlo, monospace'],
+]
+---
+
+<Base title="Theme builder" description="Design a Qikbar theme visually and copy the config or CSS.">
+  <div class="container builder">
+    <aside class="panel card">
+      <div class="panel-head">
+        <h1>Theme builder</h1>
+        <button type="button" class="reset" data-reset><Icon name="refresh" size={13} /> Reset</button>
+      </div>
+
+      <label class="field-label">Preset</label>
+      <div class="chips" data-presets>
+        <button type="button" data-preset="" aria-pressed="true">Default</button>
+        {Object.values(presets).filter((p) => !['light', 'dark'].includes(p.name)).map((p) => <button type="button" data-preset={p.name} aria-pressed="false">{p.label}</button>)}
+      </div>
+
+      <label class="field-label">Appearance</label>
+      <div class="segmented" data-appearance>
+        <button type="button" data-value="dark" aria-pressed="true"><Icon name="moon" size={14} /> Dark</button>
+        <button type="button" data-value="light" aria-pressed="false"><Icon name="sun" size={14} /> Light</button>
+      </div>
+
+      <label class="field-label">Colors</label>
+      <div class="colors">
+        {colorKeys.map(([key, label]) => (
+          <label class="color">
+            <input type="color" data-color={key} aria-label={`${label} color`} />
+            <span>{label}</span>
+            <input type="text" data-text={key} spellcheck="false" aria-label={`${label} value`} />
+          </label>
+        ))}
+      </div>
+
+      <label class="field-label">Shape &amp; type</label>
+      <div class="sliders">
+        {sizeKeys.map(([key, label, min, max]) => (
+          <label class="slider">
+            <span>{label}</span>
+            <input type="range" min={min} max={max} step="1" data-size={key} />
+            <output data-out={key}></output>
+          </label>
+        ))}
+        <label class="slider">
+          <span>Font</span>
+          <select data-font>
+            {fonts.map(([name, value]) => <option value={value}>{name}</option>)}
+          </select>
+        </label>
+      </div>
+    </aside>
+
+    <section class="stage">
+      <div class="preview" data-preview-bg>
+        <div id="theme-bar"></div>
+      </div>
+      <div class="output card">
+        <div class="tabs" role="tablist">
+          <button type="button" role="tab" aria-selected="true" data-tab="js">JavaScript</button>
+          <button type="button" role="tab" aria-selected="false" data-tab="css">CSS</button>
+          <button type="button" class="copy" data-copy-output><Icon name="copy" size={13} /> Copy</button>
+        </div>
+        <pre><code data-output></code></pre>
+      </div>
+    </section>
+  </div>
+</Base>
+
+<script>
+  import { createQikbar, type ThemeVars, type ThemePresetName } from 'qikbar'
+  import { baseDark, baseLight, resolveThemeVars, themeToCss } from 'qikbar/theme'
+  import { calculator } from 'qikbar/extensions'
+  import { demoCommands, projectSource } from '../scripts/demo-data'
+
+  const state: { preset: ThemePresetName | ''; appearance: 'light' | 'dark'; vars: ThemeVars; tab: 'js' | 'css' } = {
+    preset: (new URLSearchParams(location.search).get('preset') as ThemePresetName) ?? '',
+    appearance: 'dark',
+    vars: {},
+    tab: 'js',
+  }
+
+  const bar = createQikbar({
+    inline: '#theme-bar',
+    hotkey: false,
+    shortcuts: false,
+    namespace: 'qikbar-themes',
+    commands: demoCommands,
+    sources: [projectSource],
+    extensions: [calculator()],
+    appearance: 'dark',
+  })
+
+  const $ = <T extends Element>(s: string) => document.querySelector<T>(s)!
+  const $$ = <T extends Element>(s: string) => [...document.querySelectorAll<T>(s)]
+
+  /** The full resolved variables for the current preset + appearance + overrides. */
+  function resolved(): ThemeVars {
+    const { vars, appearance } = resolveThemeVars(state.preset || undefined, state.appearance)
+    const base = appearance === 'dark' ? { ...baseLight, ...baseDark } : baseLight
+    return { ...base, ...vars, ...state.vars }
+  }
+
+  function toHex(value: string | undefined): string {
+    if (!value) return '#000000'
+    if (/^#[0-9a-f]{6}$/i.test(value)) return value
+    if (/^#[0-9a-f]{3}$/i.test(value)) return `#${[...value.slice(1)].map((c) => c + c).join('')}`
+    const ctx = document.createElement('canvas').getContext('2d')!
+    ctx.fillStyle = value
+    const v = ctx.fillStyle
+    return /^#/.test(v) ? v : `#${(v.match(/\d+/g) ?? ['0', '0', '0']).slice(0, 3).map((n) => Number(n).toString(16).padStart(2, '0')).join('')}`
+  }
+
+  function render() {
+    const theme = state.preset ? { preset: state.preset, vars: state.vars } : { vars: state.vars }
+    bar.configure({ theme, appearance: state.appearance })
+    const all = resolved()
+    $$<HTMLInputElement>('[data-color]').forEach((i) => (i.value = toHex(all[i.dataset.color!])))
+    $$<HTMLInputElement>('[data-text]').forEach((i) => {
+      if (document.activeElement !== i) i.value = all[i.dataset.text!] ?? ''
+    })
+    $$<HTMLInputElement>('[data-size]').forEach((i) => {
+      const v = parseFloat(all[i.dataset.size!] ?? '0')
+      i.value = String(v)
+      $(`[data-out="${i.dataset.size}"]`).textContent = `${v}px`
+    })
+    const font = $<HTMLSelectElement>('[data-font]')
+    if (all.font && [...font.options].some((o) => o.value === all.font)) font.value = all.font
+    $$<HTMLButtonElement>('[data-preset]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.preset === state.preset)))
+    $$<HTMLButtonElement>('[data-appearance] button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.value === state.appearance)))
+    $<HTMLElement>('[data-preview-bg]').dataset.appearance = state.appearance
+
+    const overrides = Object.fromEntries(Object.entries(state.vars).filter(([, v]) => v != null && v !== ''))
+    const code =
+      state.tab === 'js'
+        ? `createQikbar({\n  theme: ${JSON.stringify({ ...(state.preset ? { preset: state.preset } : {}), ...(Object.keys(overrides).length ? { vars: overrides } : {}) }, null, 2).replace(/\n/g, '\n  ').replace(/"(\w+)":/g, '$1:')},\n  appearance: '${state.appearance}',\n})`
+        : themeToCss({ ...resolveThemeVars(state.preset || undefined, state.appearance).vars, ...overrides }, `.qb-root[data-qb-appearance='${state.appearance}']`)
+    $('[data-output]').textContent = code
+    const url = new URL(location.href)
+    if (state.preset) url.searchParams.set('preset', state.preset)
+    else url.searchParams.delete('preset')
+    history.replaceState(null, '', url)
+  }
+
+  $$<HTMLButtonElement>('[data-preset]').forEach((b) =>
+    b.addEventListener('click', () => {
+      state.preset = b.dataset.preset as ThemePresetName | ''
+      state.vars = {}
+      const only = state.preset ? resolveThemeVars(state.preset, state.appearance).appearance : state.appearance
+      state.appearance = only
+      render()
+    }),
+  )
+  $$<HTMLButtonElement>('[data-appearance] button').forEach((b) =>
+    b.addEventListener('click', () => {
+      state.appearance = b.dataset.value as 'light' | 'dark'
+      render()
+    }),
+  )
+  $$<HTMLInputElement>('[data-color]').forEach((i) =>
+    i.addEventListener('input', () => {
+      state.vars[i.dataset.color!] = i.value
+      render()
+    }),
+  )
+  $$<HTMLInputElement>('[data-text]').forEach((i) =>
+    i.addEventListener('change', () => {
+      state.vars[i.dataset.text!] = i.value.trim() || undefined
+      render()
+    }),
+  )
+  $$<HTMLInputElement>('[data-size]').forEach((i) =>
+    i.addEventListener('input', () => {
+      state.vars[i.dataset.size!] = `${i.value}px`
+      render()
+    }),
+  )
+  $<HTMLSelectElement>('[data-font]').addEventListener('change', (e) => {
+    state.vars.font = (e.target as HTMLSelectElement).value
+    render()
+  })
+  $('[data-reset]').addEventListener('click', () => {
+    state.vars = {}
+    state.preset = ''
+    render()
+  })
+  $$<HTMLButtonElement>('[data-tab]').forEach((t) =>
+    t.addEventListener('click', () => {
+      state.tab = t.dataset.tab as 'js' | 'css'
+      $$<HTMLButtonElement>('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x === t)))
+      render()
+    }),
+  )
+  $('[data-copy-output]').addEventListener('click', async () => {
+    await navigator.clipboard.writeText($('[data-output]').textContent ?? '')
+    window.qikbar.toast({ title: 'Theme copied', style: 'success' })
+  })
+
+  render()
+</script>
+
+<style>
+  .builder { display: grid; grid-template-columns: 340px minmax(0, 1fr); gap: 24px; padding-top: 32px; align-items: start; }
+  @media (max-width: 980px) { .builder { grid-template-columns: 1fr; } }
+  .panel { padding: 20px; position: sticky; top: calc(var(--header) + 20px); max-height: calc(100vh - var(--header) - 40px); overflow-y: auto; scrollbar-width: thin; }
+  @media (max-width: 980px) { .panel { position: static; max-height: none; } }
+  .panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .panel h1 { font-size: 18px; margin: 0; letter-spacing: -0.02em; }
+  .reset { display: inline-flex; gap: 6px; align-items: center; border: 0; background: none; color: var(--subtle); font: 500 12.5px var(--font); cursor: pointer; }
+  .reset:hover { color: var(--text); }
+  .field-label { display: block; font-size: 12px; font-weight: 600; color: var(--subtle); text-transform: uppercase; letter-spacing: .04em; margin: 20px 0 8px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chips button, .segmented button { height: 28px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-soft); color: var(--muted); font: 500 12.5px var(--font); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .chips button[aria-pressed='true'], .segmented button[aria-pressed='true'] { border-color: var(--brand); color: var(--text); background: var(--brand-soft); }
+  .segmented { display: flex; gap: 6px; }
+  .colors { display: grid; gap: 6px; }
+  .color { display: grid; grid-template-columns: 28px 1fr 130px; gap: 10px; align-items: center; font-size: 13.5px; color: var(--muted); }
+  .color input[type='color'] { width: 28px; height: 28px; padding: 0; border: 1px solid var(--border); border-radius: 8px; background: none; cursor: pointer; overflow: hidden; }
+  .color input[type='color']::-webkit-color-swatch-wrapper { padding: 0; }
+  .color input[type='color']::-webkit-color-swatch { border: 0; border-radius: 7px; }
+  .color input[type='text'], .slider select { height: 28px; padding: 0 8px; border-radius: 7px; border: 1px solid var(--border); background: var(--bg-soft); color: var(--text); font: 12px var(--mono); min-width: 0; }
+  .sliders { display: grid; gap: 10px; }
+  .slider { display: grid; grid-template-columns: 96px 1fr 44px; gap: 10px; align-items: center; font-size: 13.5px; color: var(--muted); }
+  .slider select { grid-column: 2 / 4; font-family: var(--font); }
+  .slider input[type='range'] { accent-color: var(--brand); width: 100%; }
+  .slider output { font: 12px var(--mono); color: var(--subtle); text-align: right; }
+
+  .stage { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+  .preview { border-radius: 18px; border: 1px solid var(--border); padding: 48px clamp(12px, 4vw, 56px); min-height: 560px; display: grid; place-items: start center;
+    background: radial-gradient(circle at 30% 0%, rgba(120, 120, 255, .15), transparent 50%), radial-gradient(circle at 80% 100%, rgba(52, 211, 153, .12), transparent 50%), #101114; }
+  .preview[data-appearance='light'] { background: radial-gradient(circle at 30% 0%, rgba(120, 120, 255, .18), transparent 50%), radial-gradient(circle at 80% 100%, rgba(52, 211, 153, .15), transparent 50%), #eef0f3; }
+  #theme-bar { width: min(100%, 720px); }
+  .output { overflow: hidden; }
+  .tabs { display: flex; align-items: center; gap: 2px; padding: 6px 8px 0; border-bottom: 1px solid var(--border); }
+  .tabs [role='tab'] { padding: 8px 12px 10px; border: 0; background: none; color: var(--subtle); font: 500 13px var(--font); border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; }
+  .tabs [role='tab'][aria-selected='true'] { color: var(--text); border-bottom-color: var(--brand); }
+  .copy { margin-left: auto; display: inline-flex; gap: 6px; align-items: center; height: 28px; padding: 0 10px; border-radius: 7px; border: 1px solid var(--border); background: var(--panel); color: var(--muted); font: 500 12.5px var(--font); cursor: pointer; margin-bottom: 6px; }
+  .output pre { margin: 0; padding: 18px 20px; font-size: 12.5px; line-height: 1.6; max-height: 360px; overflow: auto; background: var(--code-bg); }
+</style>

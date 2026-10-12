@@ -1,0 +1,30 @@
+Add a Qikbar command bar (⌘K) to this app.
+
+Qikbar is an open-source, zero-dependency command bar library (npm package `qikbar`). The full documentation for AI agents is at https://qikbar.com/llms-full.txt. Read it before you start.
+
+Do the following:
+
+1. Install it with this project's package manager (`npm install qikbar`, `pnpm add qikbar`, `yarn add qikbar` or `bun add qikbar`).
+
+2. Find how this app does routing (Next.js, React Router, TanStack Router, Vue Router, SvelteKit, Remix, Astro, or plain links). Mount Qikbar once, near the root:
+   - React and Next.js: render `<Qikbar … />` from `qikbar/react` in the root layout or a top-level client component.
+   - Anything else: call `createQikbar({ … })` from `qikbar` once on the client.
+   - Pass the router's navigate function as `navigate`, for example `navigate: (href) => router.push(href)`.
+
+3. Add a `routes` entry for every main page you find (path, title, an `icon` from the built-in icon names, and `keywords`). Group them with `section`.
+
+4. Add `commands` for the main actions a user takes (create, invite, toggle, sign out, open settings…). Wire them to the app's existing functions. Use `view: form({...})` for actions that need input. Use `arguments` for one or two quick text inputs.
+
+5. For each main kind of record (projects, users, documents, orders…), add a `sources` entry. It calls the app's existing API or data layer with the query and returns items (`title`, `subtitle`, `href`, `icon`). Respect the `signal` for cancellation.
+
+6. Make it match the app's design. Set `theme: { vars: { … } }` from the app's colors, font, and radius (accent, bg, fg, border, radius, font). Set `appearance: 'auto'` if the app has a dark mode.
+
+7. Add a visible trigger, for example a "Search… ⌘K" button in the header, with the `data-qikbar-open` attribute or `useQikbar().open()`.
+
+8. If the app already uses an AI provider, or the user wants AI: add a server route with `createHandler` from `qikbar/server`, and set `ai: proxy('/api/qikbar')` on the client. Keep API keys on the server. Otherwise skip AI.
+
+9. Add the built-in extensions that fit: `calculator()`, `themeSwitcher()` (only if the app has dark mode), and `shortcuts()` from `qikbar/extensions`.
+
+10. Run the type checker and the build. Fix any errors. Then summarize what you added, with file paths.
+
+Keep the changes small and idiomatic for this codebase. Don't add new dependencies besides `qikbar`.

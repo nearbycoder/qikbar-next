@@ -1,0 +1,478 @@
+---
+import Base from '../layouts/Base.astro'
+import CodeTabs from '../components/CodeTabs.astro'
+import Icon from '../components/Icon.astro'
+import { presets } from 'qikbar/theme'
+import prompt from '../../public/prompt.txt?raw'
+
+const usage = [
+  {
+    label: 'Vanilla JS',
+    lang: 'ts',
+    code: `
+import { createQikbar } from 'qikbar'
+
+createQikbar({
+  routes: [
+    { path: '/dashboard', title: 'Dashboard', icon: 'home' },
+    { path: '/settings', title: 'Settings', icon: 'settings' },
+  ],
+  commands: [
+    { title: 'New project', icon: 'plus', shortcut: 'c p', run: () => openNewProject() },
+  ],
+  sources: [{
+    id: 'projects',
+    title: 'Projects',
+    search: ({ query, signal }) =>
+      fetch(\`/api/projects?q=\${query}\`, { signal }).then((r) => r.json()),
+  }],
+})`,
+  },
+  {
+    label: 'React / Next.js',
+    lang: 'tsx',
+    code: `
+'use client'
+import { Qikbar, useCommands } from 'qikbar/react'
+import { useRouter } from 'next/navigation'
+
+export function CommandBar() {
+  const router = useRouter()
+  return <Qikbar routes={routes} navigate={(href) => router.push(href)} theme="linear" />
+}
+
+// Anywhere in your tree: page-specific commands
+function ProjectPage({ project }) {
+  useCommands([{ title: \`Archive \${project.name}\`, icon: 'trash', run: () => archive(project.id) }], [project.id])
+}`,
+  },
+  {
+    label: 'Script tag',
+    lang: 'html',
+    code: `
+<script src="https://unpkg.com/qikbar/dist/qikbar.global.js"></script>
+<script>
+  // Indexes your nav links and [data-qikbar] elements automatically.
+  Qikbar.createQikbar({ autoIndex: true })
+</script>
+
+<button data-qikbar="Sign out" onclick="signOut()">Sign out</button>
+<button data-qikbar-open>Search… ⌘K</button>`,
+  },
+  {
+    label: 'AI',
+    lang: 'ts',
+    code: `
+import { createQikbar, proxy } from 'qikbar'
+
+// Browser: talk to your own endpoint (keys stay on the server)
+createQikbar({ routes, commands, ai: proxy('/api/qikbar') })
+
+// Server (Next.js route handler, Hono, Bun, Workers…)
+import { createHandler, anthropic } from 'qikbar/server'
+export const POST = createHandler({
+  provider: anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }),
+})`,
+  },
+]
+
+const extensionCode = `
+import { defineExtension, list } from 'qikbar'
+
+export const github = defineExtension({
+  name: 'github',
+  title: 'GitHub',
+  icon: 'github',
+  preferences: [{ name: 'token', title: 'Access token', type: 'password', required: true }],
+  commands: [{
+    name: 'repos',
+    title: 'Search Repositories',
+    view: (ctx) => list({
+      placeholder: 'Search repositories…',
+      items: async ({ query, signal }) => {
+        const res = await fetch(\`https://api.github.com/search/repositories?q=\${query}\`, {
+          headers: { authorization: \`Bearer \${ctx.preferences.token}\` }, signal,
+        })
+        const { items } = await res.json()
+        return items.map((r) => ({ title: r.full_name, subtitle: r.description, url: r.html_url,
+          accessories: [{ text: \`★ \${r.stargazers_count}\` }] }))
+      },
+    }),
+  }],
+  tools: [{
+    name: 'create_issue',
+    description: 'Create a GitHub issue',
+    parameters: { type: 'object', properties: { repo: { type: 'string' }, title: { type: 'string' } } },
+    confirm: true,
+    run: (args, ctx) => createIssue(ctx.preferences.token, args),
+  }],
+})`
+
+const features = [
+  { icon: 'search', title: 'Instant fuzzy search', body: 'A tuned matcher ranks word starts, acronyms and camelCase. Frequently used items rise to the top. Matches are highlighted as you type.' },
+  { icon: 'arrow-up-right', title: 'Routing built in', body: 'Pass your routes and your router’s navigate function. Works with Next.js, React Router, Vue, SvelteKit, Astro, or plain links.' },
+  { icon: 'layers', title: 'Views, not just lists', body: 'Push lists, grids, Markdown details, forms and chats. Raycast-style navigation with breadcrumbs, back and an action panel.' },
+  { icon: 'zap', title: 'Live data sources', body: 'Search your API as the user types, with debouncing and cancellation built in. Results merge into ranked sections.' },
+  { icon: 'sparkles', title: 'AI that takes action', body: '“Take me to billing for Acme.” The model sees your commands as tools and runs them. Works with Claude, GPT, Gemini, local models, or your own key.' },
+  { icon: 'puzzle', title: 'Extensions API', body: 'Package commands, sources, AI tools and preferences into an extension. Inspired by Raycast and framework-agnostic.' },
+  { icon: 'palette', title: 'Themeable to the pixel', body: '14 presets, 30+ CSS variables, light and dark, slot class names for Tailwind, or unstyled. It looks like part of your app.' },
+  { icon: 'keyboard', title: 'Keyboard first', body: 'Global shortcuts and sequences ("g s"), action shortcuts, inline arguments, Tab to AI and Esc to go back. Accessible combobox markup.' },
+  { icon: 'package', title: 'Zero dependencies', body: 'About 3.5 KB to boot. The UI loads when the browser is idle. Virtualized lists handle 100,000 rows. No framework lock-in.' },
+]
+
+const presetList = Object.values(presets).filter((p) => !['light', 'dark'].includes(p.name))
+---
+
+<Base>
+  <section class="hero">
+    <div class="glow" aria-hidden="true"></div>
+    <div class="container hero-inner">
+      <a class="pill" href="https://github.com/nearbycoder/qikbar-next"><span class="dot"></span> Open source and MIT licensed <Icon name="arrow-right" size={13} /></a>
+      <h1 class="hero-title">The command bar<br /><span class="gradient-text">your app deserves.</span></h1>
+      <p class="hero-lead">
+        Qikbar adds Raycast-style search, navigation, actions and AI to any web app. It takes one function call, has zero dependencies, and works with any framework.
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="/docs/quick-start">Get started <Icon name="arrow-right" size={15} /></a>
+        <button class="btn" type="button" data-qikbar-open>Try it <span class="kbd" data-mod-k>⌘K</span></button>
+        <button class="btn btn-ghost install" type="button" data-copy="npm install qikbar"><code>npm i qikbar</code><Icon name="copy" size={14} /></button>
+      </div>
+    </div>
+
+    <div class="container">
+      <div class="window" id="demo-window">
+        <div class="window-bar">
+          <span></span><span></span><span></span>
+          <div class="window-title">acme.app</div>
+        </div>
+        <div class="window-body">
+          <div id="hero-bar" class="hero-bar"></div>
+        </div>
+      </div>
+      <div class="demo-controls">
+        <div class="hints">
+          <span>Try</span>
+          <button type="button" data-try="acme">acme</button>
+          <button type="button" data-try="12 * (3 + 4)">12 * (3 + 4)</button>
+          <button type="button" data-try="5 km in mi">5 km in mi</button>
+          <button type="button" data-try="team">team</button>
+          <button type="button" data-ask="go to billing">go to billing <span class="kbd">Tab</span></button>
+        </div>
+        <div class="theme-chips" role="radiogroup" aria-label="Demo theme">
+          {['default', ...presetList.map((p) => p.name)].slice(0, 9).map((name, i) => (
+            <button type="button" role="radio" aria-checked={i === 0 ? 'true' : 'false'} data-preset={name}>
+              {name === 'default' ? 'Default' : presets[name as keyof typeof presets].label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="frameworks container" aria-label="Works with">
+    <span>Works with</span>
+    {['React', 'Next.js', 'Vue', 'Svelte', 'Astro', 'Angular', 'Solid', 'Remix', 'HTMX', 'Plain HTML'].map((f) => <span class="fw">{f}</span>)}
+  </section>
+
+  <section class="section container">
+    <span class="eyebrow">Everything ⌘K should be</span>
+    <h2 class="section-title">One package. Every feature you’d build yourself.</h2>
+    <p class="section-lead">Most command palettes give you a list and a text box. Qikbar gives you the whole product: ranking, routing, views, data, AI, extensions and theming.</p>
+    <div class="features">
+      {features.map((f) => (
+        <div class="feature card">
+          <div class="feature-icon"><Icon name={f.icon as any} size={18} /></div>
+          <h3>{f.title}</h3>
+          <p>{f.body}</p>
+        </div>
+      ))}
+    </div>
+  </section>
+
+  <section class="section container split">
+    <div>
+      <span class="eyebrow"><Icon name="sparkles" size={14} /> AI-native</span>
+      <h2 class="section-title">Type what you want. It does it.</h2>
+      <p class="section-lead">Press <kbd>Tab</kbd> from any search to ask AI. Every command, route and data source becomes a tool the model can call. Users can say “open the Billing v2 project” instead of looking for it.</p>
+      <ul class="checks">
+        <li><Icon name="check" size={16} /> Claude, GPT, Gemini, Ollama and any OpenAI-compatible API, with no SDK</li>
+        <li><Icon name="check" size={16} /> A server proxy keeps keys private. Or let users bring their own key.</li>
+        <li><Icon name="check" size={16} /> Chrome’s built-in on-device model, free and private</li>
+        <li><Icon name="check" size={16} /> Confirmation before destructive actions</li>
+        <li><Icon name="check" size={16} /> <span><code>ctx.ai.stream()</code> for your own AI commands</span></li>
+      </ul>
+      <a class="btn" href="/docs/ai">Read the AI guide <Icon name="arrow-right" size={15} /></a>
+    </div>
+    <div class="ai-demo">
+      <div id="ai-bar" class="ai-bar"></div>
+      <div class="ai-prompts">
+        <button type="button" data-ai="Open Billing v2">“Open Billing v2”</button>
+        <button type="button" data-ai="Go to settings">“Go to settings”</button>
+        <button type="button" data-ai="What can you do?">“What can you do?”</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="section container">
+    <span class="eyebrow">Developer experience</span>
+    <h2 class="section-title">A few lines to a great search experience.</h2>
+    <p class="section-lead">Everything is plain data: commands, views and actions are objects. Use it from React, Vue, Svelte, a script tag, or let an AI agent wire it up for you.</p>
+    <div style="margin-top: 36px"><CodeTabs id="usage" tabs={usage} /></div>
+  </section>
+
+  <section class="section container prompt-section">
+    <div class="prompt-card card">
+      <div class="prompt-head">
+        <div>
+          <span class="eyebrow"><Icon name="bot" size={14} /> Set up with one prompt</span>
+          <h2 class="section-title" style="font-size: 32px">Let your coding agent do it.</h2>
+          <p class="section-lead" style="font-size: 16px">Paste this into Claude Code, Cursor, Copilot or Codex. It reads your router, routes and API, then wires up Qikbar to match your app. Every docs page is also available as Markdown at <a href="/llms.txt">/llms.txt</a>.</p>
+        </div>
+        <button class="btn btn-brand" type="button" data-copy-prompt><Icon name="copy" size={15} /> Copy prompt</button>
+      </div>
+      <pre class="prompt-text"><code>{prompt}</code></pre>
+    </div>
+  </section>
+
+  <section class="section container split reverse">
+    <div>
+      <span class="eyebrow"><Icon name="puzzle" size={14} /> Extensions</span>
+      <h2 class="section-title">Build once, share everywhere.</h2>
+      <p class="section-lead">An extension bundles commands, live sources, AI tools and user preferences. If preferences are missing, Qikbar asks for them the first time and stores them. It works in any app that uses Qikbar.</p>
+      <div class="ext-grid">
+        {[
+          ['calculator', 'Calculator', 'Math and unit conversions inline'],
+          ['palette', 'Theme switcher', 'Light, dark and system commands'],
+          ['file', 'Page tools', 'Jump to headings, copy URL, print'],
+          ['sparkles', 'AI actions', 'Summarize, translate, explain'],
+          ['keyboard', 'Shortcuts', 'A cheat sheet of every hotkey'],
+          ['key', 'Bring your own key', 'Users plug in their own AI key'],
+        ].map(([icon, title, body]) => (
+          <div class="ext"><Icon name={icon as any} size={16} /><div><strong>{title}</strong><span>{body}</span></div></div>
+        ))}
+      </div>
+      <a class="btn" href="/extensions">Browse extensions <Icon name="arrow-right" size={15} /></a>
+    </div>
+    <div class="ext-code"><CodeTabs id="ext" tabs={[{ label: 'github.ts', lang: 'ts', code: extensionCode }]} /></div>
+  </section>
+
+  <section class="section container">
+    <span class="eyebrow"><Icon name="palette" size={14} /> Theming</span>
+    <h2 class="section-title">Looks native in every app.</h2>
+    <p class="section-lead">Start from a preset, override any CSS variable, or bring your own classes. Light and dark follow your app automatically.</p>
+    <div class="presets">
+      {presetList.map((p) => {
+        const v = { ...p.dark, ...(p.only === 'light' ? p.light : {}) }
+        const vars = Object.entries(v).map(([k, val]) => `--p-${k}:${val}`).join(';')
+        return (
+          <a class="preset" href={`/themes?preset=${p.name}`} style={vars}>
+            <div class="preset-bar">
+              <div class="preset-input">Search…</div>
+              <div class="preset-row sel"><i></i><span></span></div>
+              <div class="preset-row"><i></i><span></span></div>
+              <div class="preset-row"><i></i><span></span></div>
+            </div>
+            <span class="preset-name">{p.label}</span>
+          </a>
+        )
+      })}
+    </div>
+    <a class="btn" href="/themes" style="margin-top: 28px">Open the theme builder <Icon name="arrow-right" size={15} /></a>
+  </section>
+
+  <section class="section container">
+    <span class="eyebrow"><Icon name="zap" size={14} /> Performance</span>
+    <h2 class="section-title">Fast at any size.</h2>
+    <div class="stats">
+      <div class="stat card"><strong>3.5<small>KB</small></strong><span>gzipped to boot. The UI loads when the browser is idle.</span></div>
+      <div class="stat card"><strong>100k</strong><span>rows, virtualized. Scrolling stays at 60fps.</span></div>
+      <div class="stat card"><strong>~3<small>ms</small></strong><span>to rank 10,000 commands on each keystroke.</span></div>
+      <div class="stat card"><strong>0</strong><span>dependencies. No React needed, no CSS-in-JS, no runtime.</span></div>
+    </div>
+  </section>
+
+  <section class="section container cta">
+    <h2 class="section-title">Free. Open source. Yours.</h2>
+    <p class="section-lead">Qikbar started as a paid SaaS. Now it’s MIT licensed and community driven, with no accounts, no tracking and no API keys required.</p>
+    <div class="hero-actions" style="justify-content: center">
+      <a class="btn btn-primary" href="/docs/quick-start">Get started</a>
+      <a class="btn" href="https://github.com/nearbycoder/qikbar-next"><Icon name="github" size={16} /> Star on GitHub</a>
+    </div>
+  </section>
+</Base>
+
+<script>
+  import { createQikbar, type QikbarInstance, type ThemePresetName } from 'qikbar'
+  import { calculator } from 'qikbar/extensions'
+  import { demoCommands, projectSource } from '../scripts/demo-data'
+  import { demoAI } from '../scripts/demo-ai'
+
+  const hero = createQikbar({
+    inline: '#hero-bar',
+    hotkey: false,
+    shortcuts: false,
+    namespace: 'qikbar-hero',
+    placeholder: 'Search Acme…',
+    commands: demoCommands,
+    sources: [projectSource],
+    extensions: [calculator()],
+    ai: { provider: demoAI, suggestions: ['Open Billing v2', 'Go to settings', 'What can you do?'] },
+  })
+
+  const aiBar = createQikbar({
+    inline: '#ai-bar',
+    hotkey: false,
+    shortcuts: false,
+    namespace: 'qikbar-ai',
+    commands: demoCommands,
+    sources: [projectSource],
+    ai: { provider: demoAI, suggestions: ['Open Billing v2', 'Go to settings', 'What can you do?'] },
+    theme: { vars: { listHeight: '340px' } },
+  })
+
+  const typeInto = (bar: QikbarInstance, text: string) => {
+    bar.open()
+    let i = 0
+    const step = () => {
+      bar.setQuery(text.slice(0, ++i))
+      if (i < text.length) setTimeout(step, 28)
+    }
+    step()
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('[data-try]').forEach((b) =>
+    b.addEventListener('click', () => {
+      document.getElementById('demo-window')?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
+      typeInto(hero, b.dataset.try!)
+    }),
+  )
+  document.querySelectorAll<HTMLButtonElement>('[data-ask]').forEach((b) =>
+    b.addEventListener('click', () => {
+      hero.close()
+      hero.ask(b.dataset.ask!)
+    }),
+  )
+  document.querySelectorAll<HTMLButtonElement>('[data-ai]').forEach((b) =>
+    b.addEventListener('click', () => {
+      aiBar.close()
+      aiBar.ask(b.dataset.ai!)
+    }),
+  )
+
+  // Theme chips
+  const chips = [...document.querySelectorAll<HTMLButtonElement>('[data-preset]')]
+  chips.forEach((chip) =>
+    chip.addEventListener('click', () => {
+      chips.forEach((c) => c.setAttribute('aria-checked', String(c === chip)))
+      const name = chip.dataset.preset!
+      hero.configure({ theme: name === 'default' ? undefined : (name as ThemePresetName) })
+    }),
+  )
+
+  // Copy buttons
+  document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((b) =>
+    b.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(b.dataset.copy!)
+      window.qikbar.toast({ title: 'Copied to clipboard', message: b.dataset.copy, style: 'success' })
+    }),
+  )
+  document.querySelector('[data-copy-prompt]')?.addEventListener('click', async () => {
+    const text = await fetch('/prompt.txt').then((r) => r.text())
+    await navigator.clipboard.writeText(text)
+    window.qikbar.toast({ title: 'Prompt copied', message: 'Paste it into your coding agent', style: 'success' })
+  })
+</script>
+
+<style>
+  .hero { position: relative; padding: 88px 0 40px; overflow: hidden; }
+  .glow { position: absolute; inset: -200px 0 auto; height: 760px; pointer-events: none;
+    background: radial-gradient(600px 300px at 50% 30%, color-mix(in srgb, var(--brand) 22%, transparent), transparent 70%),
+      radial-gradient(500px 260px at 70% 10%, color-mix(in srgb, var(--brand-2) 16%, transparent), transparent 70%);
+    filter: blur(10px); }
+  .hero::before { content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .5;
+    background-image: linear-gradient(var(--border) 1px, transparent 1px), linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 56px 56px; mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 30%, transparent 75%); }
+  .hero-inner { position: relative; text-align: center; display: flex; flex-direction: column; align-items: center; }
+  .hero-title { font-size: clamp(42px, 7.4vw, 84px); line-height: 1.02; letter-spacing: -0.05em; font-weight: 700; margin: 26px 0 22px; text-wrap: balance; }
+  .hero-lead { font-size: clamp(17px, 2vw, 20px); color: var(--muted); max-width: 640px; margin: 0 auto; text-wrap: pretty; }
+  .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 34px; justify-content: center; }
+  .install code { font-size: 13.5px; color: var(--muted); }
+
+  .window { position: relative; margin: 64px auto 0; max-width: 860px; border-radius: 18px; border: 1px solid var(--border-strong);
+    background: linear-gradient(180deg, var(--panel-2), var(--bg-soft)); box-shadow: 0 40px 120px -40px color-mix(in srgb, var(--brand) 35%, transparent), var(--shadow); overflow: hidden; }
+  .window-bar { position: relative; height: 40px; display: flex; align-items: center; gap: 7px; padding: 0 14px; border-bottom: 1px solid var(--border); }
+  .window-bar > span { width: 11px; height: 11px; border-radius: 50%; background: var(--border-strong); }
+  .window-title { position: absolute; left: 50%; translate: -50% 0; font-size: 12.5px; color: var(--subtle); padding: 3px 40px; border-radius: 6px; background: var(--bg-soft); }
+  .window-body { padding: 36px clamp(12px, 5vw, 64px) 44px;
+    background: radial-gradient(circle at 20% 0%, color-mix(in srgb, var(--brand) 8%, transparent), transparent 50%), repeating-linear-gradient(135deg, transparent 0 14px, color-mix(in srgb, var(--text) 1.6%, transparent) 14px 15px); }
+  .hero-bar { max-width: 680px; margin: 0 auto; min-height: 478px; }
+  .hero-bar :global(.qb-dialog) { box-shadow: 0 30px 80px -20px rgba(0,0,0,.5), 0 0 0 1px var(--border); }
+
+  .demo-controls { max-width: 860px; margin: 18px auto 0; display: flex; flex-direction: column; gap: 12px; align-items: center; }
+  .hints, .theme-chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-items: center; font-size: 13px; color: var(--subtle); }
+  .hints button, .theme-chips button { height: 28px; padding: 0 11px; border-radius: 8px; border: 1px solid var(--border); background: var(--panel); color: var(--muted); font: 500 12.5px var(--font); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+  .hints button { font-family: var(--mono); font-size: 12px; }
+  .hints button:hover, .theme-chips button:hover { color: var(--text); border-color: var(--border-strong); }
+  .theme-chips button[aria-checked='true'] { color: var(--text); border-color: var(--brand); background: var(--brand-soft); }
+  .hints .kbd { height: 18px; font-size: 10.5px; }
+
+  .frameworks { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 26px; margin-top: 64px; color: var(--subtle); font-size: 14px; }
+  .frameworks .fw { color: var(--muted); font-weight: 550; letter-spacing: -0.01em; font-size: 15px; }
+
+  .section { margin-top: 140px; }
+  .features { margin-top: 44px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .feature { padding: 22px 22px 24px; transition: border-color .2s, transform .2s; }
+  .feature:hover { border-color: var(--border-strong); }
+  .feature-icon { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; color: var(--brand); background: var(--brand-soft); margin-bottom: 16px; }
+  .feature h3 { margin: 0 0 6px; font-size: 16px; letter-spacing: -0.01em; }
+  .feature p { margin: 0; color: var(--muted); font-size: 14.5px; line-height: 1.55; }
+  @media (max-width: 900px) { .features { grid-template-columns: 1fr 1fr; } }
+  @media (max-width: 600px) { .features { grid-template-columns: 1fr; } }
+
+  .split { display: grid; grid-template-columns: 1fr 1.1fr; gap: 64px; align-items: center; }
+  .split.reverse { grid-template-columns: 1fr 1.1fr; }
+  @media (max-width: 960px) { .split, .split.reverse { grid-template-columns: 1fr; } }
+  .checks { list-style: none; padding: 0; margin: 26px 0 30px; display: grid; gap: 10px; color: var(--muted); font-size: 15px; }
+  .checks li { display: flex; gap: 10px; align-items: flex-start; }
+  .checks :global(svg) { color: var(--brand); margin-top: 4px; flex-shrink: 0; }
+  .checks code { font-size: 13px; color: var(--text); }
+  .ai-demo { display: flex; flex-direction: column; gap: 12px; }
+  .ai-bar { min-height: 438px; }
+  .ai-prompts { display: flex; gap: 8px; flex-wrap: wrap; }
+  .ai-prompts button { height: 32px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--panel); color: var(--muted); font: 500 13px var(--font); cursor: pointer; }
+  .ai-prompts button:hover { color: var(--text); border-color: var(--brand); }
+
+  .prompt-card { padding: 32px; background: linear-gradient(180deg, color-mix(in srgb, var(--brand) 6%, var(--panel)), var(--panel)); }
+  .prompt-head { display: flex; justify-content: space-between; gap: 24px; align-items: flex-end; flex-wrap: wrap; }
+  .prompt-head a { color: var(--brand); }
+  .prompt-text { margin: 24px 0 0; max-height: 280px; overflow: auto; padding: 18px 20px; border-radius: 12px; border: 1px solid var(--border); background: var(--code-bg); font-size: 12.5px; line-height: 1.65; white-space: pre-wrap; color: var(--muted); }
+
+  .ext-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 26px 0 30px; }
+  .ext { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--border); background: var(--panel); }
+  .ext :global(svg) { color: var(--brand); margin-top: 3px; flex-shrink: 0; }
+  .ext strong { display: block; font-size: 14px; }
+  .ext span { font-size: 13px; color: var(--muted); }
+  .ext-code { min-width: 0; }
+
+  .presets { margin-top: 40px; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+  .preset { text-decoration: none; display: flex; flex-direction: column; gap: 10px; }
+  .preset-bar { aspect-ratio: 4 / 3; border-radius: calc(var(--p-radius, 12px) * .8); background: var(--p-bg, #1c1c1f); border: 1px solid var(--p-border, rgba(255,255,255,.1)); padding: 10px; display: flex; flex-direction: column; gap: 6px; transition: transform .2s; font-family: var(--p-font, var(--font)); box-shadow: 0 10px 30px -14px rgba(0,0,0,.5); }
+  .preset:hover .preset-bar { transform: translateY(-3px); }
+  .preset-input { color: var(--p-fgSubtle, #888); font-size: 11px; padding: 2px 4px 7px; border-bottom: 1px solid var(--p-border, rgba(255,255,255,.1)); margin-bottom: 2px; }
+  .preset-row { display: flex; align-items: center; gap: 6px; padding: 5px 6px; border-radius: calc(var(--p-radiusItem, 8px) * .7); }
+  .preset-row.sel { background: var(--p-selection, rgba(255,255,255,.08)); }
+  .preset-row i { width: 9px; height: 9px; border-radius: 3px; background: var(--p-accent, #8b7dff); }
+  .preset-row span { height: 5px; flex: 1; border-radius: 3px; background: var(--p-fgMuted, #999); opacity: .45; }
+  .preset-row.sel span { opacity: .9; background: var(--p-fg, #eee); }
+  .preset-name { font-size: 13.5px; color: var(--muted); padding-left: 2px; }
+
+  .stats { margin-top: 36px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  .stat { padding: 24px; display: flex; flex-direction: column; gap: 8px; }
+  .stat strong { font-size: 44px; letter-spacing: -0.04em; line-height: 1; font-weight: 650; background: linear-gradient(120deg, var(--text), var(--brand)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .stat small { font-size: 22px; margin-left: 2px; }
+  .stat span { color: var(--muted); font-size: 14.5px; }
+  @media (max-width: 900px) { .stats { grid-template-columns: 1fr 1fr; } }
+
+  .cta { text-align: center; display: flex; flex-direction: column; align-items: center; padding: 72px 24px; border-radius: 24px; border: 1px solid var(--border);
+    background: radial-gradient(500px 220px at 50% 0%, color-mix(in srgb, var(--brand) 16%, transparent), transparent 70%), var(--panel); }
+</style>

@@ -1,0 +1,9 @@
+:root { font-family: system-ui, sans-serif; color-scheme: light dark; }
+html.dark body { background: #0b0b0d; color: #eee; }
+body { margin: 0; }
+header { display: flex; gap: 24px; align-items: center; padding: 14px 24px; border-bottom: 1px solid #8883; }
+nav { display: flex; gap: 4px; }
+nav button { border: 0; background: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; color: inherit; font: inherit; }
+nav button[aria-current='page'] { background: #8882; }
+.trigger { margin-left: auto; display: flex; gap: 24px; align-items: center; padding: 6px 10px; border: 1px solid #8884; border-radius: 8px; background: transparent; color: #888; cursor: pointer; font: inherit; }
+main { padding: 24px; max-width: 720px; }

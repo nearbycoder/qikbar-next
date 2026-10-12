@@ -1,0 +1,156 @@
+---
+import { Code } from 'astro:components'
+import Base from '../layouts/Base.astro'
+import Icon from '../components/Icon.astro'
+import { catalog } from '../data/extensions'
+
+const sources = import.meta.glob<string>('../extensions/*.ts', { query: '?raw', import: 'default', eager: true })
+const sourceOf = (file: string) => sources[`../extensions/${file}`] ?? ''
+
+const builtIns = [
+  { icon: 'calculator', title: 'Calculator', fn: 'calculator()', body: 'Math, percentages and unit conversions as you type.', try: '15% of 240' },
+  { icon: 'palette', title: 'Theme switcher', fn: 'themeSwitcher()', body: 'Toggle dark mode with ⌘⇧L, or choose light, dark or system.', try: 'dark mode' },
+  { icon: 'file', title: 'Page', fn: 'page()', body: 'Jump to headings on the page, copy the URL, go back, print or share.', try: 'copy page url' },
+  { icon: 'sparkles', title: 'AI actions', fn: 'aiActions()', body: 'Summarize the page, explain selected text, translate.', try: 'summarize' },
+  { icon: 'keyboard', title: 'Shortcuts', fn: 'shortcuts()', body: 'A searchable cheat sheet of every keyboard shortcut.', try: 'keyboard shortcuts' },
+  { icon: 'key', title: 'AI settings', fn: 'byok.settings()', body: 'Let users bring their own Anthropic, OpenAI or Gemini key.', try: 'ai settings' },
+]
+
+const iconOf = (icon: unknown) => (typeof icon === 'string' && /^https?:/.test(icon) ? { url: icon } : typeof icon === 'string' && icon.length <= 4 ? { emoji: icon } : { name: (icon as string) ?? 'puzzle' })
+---
+
+<Base title="Extensions" description="Built-in and community extensions for Qikbar: commands, sources, AI tools and preferences in portable packages.">
+  <section class="container head">
+    <span class="eyebrow"><Icon name="puzzle" size={14} /> Extensions</span>
+    <h1 class="section-title" style="font-size: clamp(36px, 5vw, 56px)">Extend the bar with anything.</h1>
+    <p class="section-lead">An extension bundles commands, live sources, AI tools and preferences. Each one below is a single readable file. Install it into this site's bar with one click, then press <kbd data-mod-k>⌘K</kbd>.</p>
+    <div class="actions">
+      <a class="btn btn-primary" href="/docs/extensions">Build an extension <Icon name="arrow-right" size={15} /></a>
+      <a class="btn" href="/docs/publishing-extensions">Publish yours</a>
+    </div>
+  </section>
+
+  <section class="container block">
+    <h2>Examples <span>Install them here, copy them into your app</span></h2>
+    <div class="cards">
+      {catalog.map((c) => {
+        const ic = iconOf(c.extension.icon)
+        return (
+          <article class="card ext" data-ext={c.extension.name}>
+            <div class="ext-head">
+              <div class="ext-icon">
+                {'url' in ic ? <img src={ic.url} alt="" width="20" height="20" loading="lazy" /> : 'emoji' in ic ? <span>{ic.emoji}</span> : <Icon name={ic.name as any} size={18} />}
+              </div>
+              <div>
+                <h3>{c.extension.title}</h3>
+                <code>{c.file}</code>
+              </div>
+              <button class="btn install" type="button" data-install={c.extension.name} aria-pressed="false">
+                <span class="when-off">Install</span><span class="when-on"><Icon name="check" size={14} /> Installed</span>
+              </button>
+            </div>
+            <p>{c.extension.description}</p>
+            <div class="tags">{c.tags.map((t) => <span>{t}</span>)}</div>
+            <div class="ext-foot">
+              <button type="button" class="link" data-try={c.try}><Icon name="search" size={13} /> Try “{c.try}”</button>
+              <details>
+                <summary><Icon name="code" size={13} /> Source</summary>
+              </details>
+            </div>
+            <div class="source" hidden>
+              <Code code={sourceOf(c.file)} lang="ts" themes={{ light: 'github-light', dark: 'github-dark-dimmed' }} defaultColor={false} />
+            </div>
+          </article>
+        )
+      })}
+    </div>
+  </section>
+
+  <section class="container block">
+    <h2>Built in <span>Import from <code>qikbar/extensions</code></span></h2>
+    <div class="cards small">
+      {builtIns.map((b) => (
+        <article class="card ext">
+          <div class="ext-head">
+            <div class="ext-icon"><Icon name={b.icon as any} size={18} /></div>
+            <div>
+              <h3>{b.title}</h3>
+              <code>{b.fn}</code>
+            </div>
+          </div>
+          <p>{b.body}</p>
+          <div class="ext-foot">
+            <button type="button" class="link" data-try={b.try}><Icon name="search" size={13} /> Try “{b.try}”</button>
+          </div>
+        </article>
+      ))}
+    </div>
+  </section>
+</Base>
+
+<script>
+  import { installedNames } from '../data/extensions'
+
+  const sync = () => {
+    const installed = new Set(installedNames())
+    document.querySelectorAll<HTMLButtonElement>('[data-install]').forEach((b) => b.setAttribute('aria-pressed', String(installed.has(b.dataset.install!))))
+  }
+  sync()
+
+  document.querySelectorAll<HTMLButtonElement>('[data-install]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const on = b.getAttribute('aria-pressed') !== 'true'
+      window.qikbarSetInstalled(b.dataset.install!, on)
+      sync()
+      window.qikbar.toast({ title: on ? 'Installed. Press ⌘K to try it.' : 'Uninstalled', style: 'success' })
+    }),
+  )
+
+  document.querySelectorAll<HTMLButtonElement>('[data-try]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const card = b.closest<HTMLElement>('[data-ext]')
+      if (card) {
+        window.qikbarSetInstalled(card.dataset.ext!, true)
+        sync()
+      }
+      window.qikbar.open({ query: b.dataset.try })
+    }),
+  )
+
+  document.querySelectorAll<HTMLDetailsElement>('.ext details').forEach((d) =>
+    d.addEventListener('toggle', () => {
+      const src = d.closest('.ext')!.querySelector<HTMLElement>('.source')!
+      src.hidden = !d.open
+    }),
+  )
+</script>
+
+<style>
+  .head { padding-top: 72px; }
+  .actions { display: flex; gap: 10px; margin-top: 28px; flex-wrap: wrap; }
+  .block { margin-top: 72px; }
+  .block h2 { font-size: 22px; letter-spacing: -0.02em; margin: 0 0 20px; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
+  .block h2 span { font-size: 14px; font-weight: 400; color: var(--subtle); }
+  .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .cards.small { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @media (max-width: 900px) { .cards, .cards.small { grid-template-columns: 1fr; } }
+  .ext { padding: 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+  .ext-head { display: flex; gap: 12px; align-items: center; }
+  .ext-icon { width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; background: var(--bg-soft); border: 1px solid var(--border); color: var(--brand); font-size: 20px; flex-shrink: 0; }
+  .ext h3 { margin: 0; font-size: 16px; }
+  .ext-head code { font-size: 12px; color: var(--subtle); }
+  .ext p { margin: 0; color: var(--muted); font-size: 14.5px; }
+  .install { margin-left: auto; height: 32px; font-size: 13px; padding: 0 12px; }
+  .install .when-on { display: none; align-items: center; gap: 6px; }
+  .install[aria-pressed='true'] { border-color: var(--brand); color: var(--brand); background: var(--brand-soft); }
+  .install[aria-pressed='true'] .when-on { display: inline-flex; }
+  .install[aria-pressed='true'] .when-off { display: none; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tags span { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--bg-soft); border: 1px solid var(--border); color: var(--muted); font-family: var(--mono); }
+  .ext-foot { display: flex; gap: 16px; align-items: center; margin-top: auto; padding-top: 4px; }
+  .link, summary { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; padding: 0; color: var(--muted); font: 500 13px var(--font); cursor: pointer; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  .link:hover, summary:hover { color: var(--brand); }
+  .source { margin-top: 4px; }
+  .source :global(.astro-code) { max-height: 420px; font-size: 12.5px; }
+</style>

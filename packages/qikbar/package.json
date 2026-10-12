@@ -1,0 +1,98 @@
+{
+  "name": "qikbar",
+  "version": "1.0.0",
+  "description": "The open-source command bar for any web app. Raycast-style search, routing, actions, extensions and AI in one tiny, themeable package.",
+  "keywords": [
+    "command-bar",
+    "command-palette",
+    "cmdk",
+    "kbar",
+    "raycast",
+    "spotlight",
+    "search",
+    "ai",
+    "react",
+    "vanilla"
+  ],
+  "license": "MIT",
+  "author": "Qikbar contributors",
+  "homepage": "https://qikbar.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nearbycoder/qikbar-next.git",
+    "directory": "packages/qikbar"
+  },
+  "bugs": "https://github.com/nearbycoder/qikbar-next/issues",
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "unpkg": "./dist/qikbar.global.js",
+  "jsdelivr": "./dist/qikbar.global.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./ai": {
+      "types": "./dist/ai/index.d.ts",
+      "default": "./dist/ai.js"
+    },
+    "./react": {
+      "types": "./dist/react/index.d.ts",
+      "default": "./dist/react.js"
+    },
+    "./server": {
+      "types": "./dist/server/index.d.ts",
+      "default": "./dist/server.js"
+    },
+    "./extensions": {
+      "types": "./dist/extensions/index.d.ts",
+      "default": "./dist/extensions.js"
+    },
+    "./theme": {
+      "types": "./dist/theme.d.ts",
+      "default": "./dist/theme.js"
+    },
+    "./utils": {
+      "types": "./dist/utils.d.ts",
+      "default": "./dist/utils.js"
+    },
+    "./styles.css": "./dist/styles.css",
+    "./global": "./dist/qikbar.global.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "bun run build.ts && tsc -p tsconfig.build.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "esbuild": "^0.28.2",
+    "happy-dom": "^21.0.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.4"
+  }
+}
