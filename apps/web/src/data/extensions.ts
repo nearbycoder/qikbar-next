@@ -35,7 +35,7 @@ export const catalog: CatalogEntry[] = [
   { extension: bookmarks, file: 'bookmarks.ts', try: 'bookmarks', category: 'Productivity', tags: ['storage', 'form', 'ctx.render', 'confirm', 'source'] },
   { extension: github, file: 'github.ts', try: 'search repositories', category: 'Developer', tags: ['preferences', 'async list', 'errors'], uses: 'GitHub API' },
   { extension: hackerNews, file: 'hacker-news.ts', try: 'top stories', category: 'Reference', tags: ['list', 'fetch', 'actions'], uses: 'Hacker News API' },
-  { extension: colors, file: 'colors.ts', try: '#22d3ee', category: 'Developer', tags: ['source', 'position: top'] },
+  { extension: colors, file: 'colors.ts', try: '#22d3ee', category: 'Developer', tags: ['source', 'position: top', 'arguments', 'SVG icons'] },
   { extension: generators, file: 'generators.ts', try: 'generate', category: 'Developer', tags: ['run', 'arguments', 'toast'] },
   { extension: emoji, file: 'emoji.ts', try: 'emoji', category: 'Utilities', tags: ['grid', 'keepOpen'] },
   { extension: worldClock, file: 'world-clock.ts', try: 'time in tokyo', category: 'Utilities', tags: ['list', 'source', 'Intl'] },

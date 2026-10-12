@@ -1,4 +1,4 @@
-import { action, defineExtension, type Item } from '@qikbar/qikbar'
+import { action, defineExtension, list, type Item } from '@qikbar/qikbar'
 
 function parse(input: string): [number, number, number] | undefined {
   const s = input.trim().toLowerCase()
@@ -33,37 +33,72 @@ function rgbToHsl([r, g, b]: [number, number, number]) {
   return [Math.round(h * 60), Math.round(s * 100), Math.round(l * 100)]
 }
 
+/** Every format for a color, as list items (empty if the input isn't a color). */
+function formats(input: string): Item[] {
+  const rgb = parse(input)
+  if (!rgb) return []
+  const hex = `#${rgb.map((v) => v.toString(16).padStart(2, '0')).join('')}`
+  const [h, s, l] = rgbToHsl(rgb)
+  const values: [string, string][] = [
+    ['HEX', hex],
+    ['RGB', `rgb(${rgb.join(' ')})`],
+    ['HSL', `hsl(${h} ${s}% ${l}%)`],
+    ['CSS var', `--color: ${hex};`],
+  ]
+  return values.map<Item>(([label, value]) => ({
+    id: `color:${label}`,
+    title: value,
+    subtitle: label,
+    noHistory: true,
+    // A filled swatch. SVG strings are rendered as trusted markup, so only use values you control.
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 18 18"><rect x="1" y="1" width="16" height="16" rx="5" fill="${hex}" stroke="rgba(127,127,127,.35)"/></svg>`,
+    accessories: [{ kbd: 'enter', text: 'Copy' }],
+    actions: [action.copy(value, { title: `Copy ${label}`, shortcut: undefined })],
+  }))
+}
+
+const randomHex = () => `#${[...crypto.getRandomValues(new Uint8Array(3))].map((v) => v.toString(16).padStart(2, '0')).join('')}`
+
 export default defineExtension({
   name: 'colors',
   title: 'Colors',
   icon: 'palette',
-  description: 'Convert colors between hex, RGB and HSL as you type.',
+  description: 'Convert colors between hex, RGB and HSL. Type a color like “#22d3ee”, or run Convert Color.',
+  commands: [
+    {
+      name: 'convert',
+      title: 'Convert Color',
+      subtitle: 'Hex, RGB, HSL',
+      icon: 'palette',
+      keywords: ['color', 'colour', 'hex', 'rgb', 'hsl', 'css'],
+      arguments: [{ name: 'color', placeholder: '#22d3ee or rgb(…)', required: true }],
+      run(ctx) {
+        const items = formats(ctx.arguments.color ?? '')
+        if (!items.length) {
+          ctx.toast({ title: 'Not a color', message: 'Try #22d3ee, rgb(34 211 238) or hsl(188 86% 53%)', style: 'failure' })
+          return false
+        }
+        return list({ title: items[0]!.title, items, filter: false })
+      },
+    },
+    {
+      name: 'random',
+      title: 'Random Color',
+      icon: 'palette',
+      keywords: ['color', 'colour', 'generate', 'random'],
+      view: () => {
+        const items = formats(randomHex())
+        return list({ title: items[0]!.title, items, filter: false })
+      },
+    },
+  ],
   sources: [
     {
       id: 'color',
       title: 'Color',
       debounce: 0,
       position: 'top',
-      search: ({ query }) => {
-        const rgb = parse(query)
-        if (!rgb) return []
-        const hex = `#${rgb.map((v) => v.toString(16).padStart(2, '0')).join('')}`
-        const [h, s, l] = rgbToHsl(rgb)
-        const formats: [string, string][] = [
-          ['HEX', hex],
-          ['RGB', `rgb(${rgb.join(' ')})`],
-          ['HSL', `hsl(${h} ${s}% ${l}%)`],
-        ]
-        return formats.map<Item>(([label, value]) => ({
-          id: `color:${label}`,
-          title: value,
-          subtitle: label,
-          noHistory: true,
-          icon: { color: hex, icon: 'circle' },
-          accessories: [{ kbd: 'enter', text: 'Copy' }],
-          actions: [action.copy(value, { title: `Copy ${label}`, shortcut: undefined })],
-        }))
-      },
+      search: ({ query }) => formats(query),
     },
   ],
 })
