@@ -14,8 +14,7 @@ createQikbar({ ai: proxy('/api/qikbar') })
 
 ## Next.js (App Router)
 
-```ts
-// app/api/qikbar/route.ts
+```ts title="app/api/qikbar/route.ts"
 import { createHandler, anthropic } from 'qikbar/server'
 
 export const POST = createHandler({
@@ -71,7 +70,10 @@ SvelteKit (`+server.ts`), Remix and React Router actions, Astro endpoints and Nu
 
 ## Authentication and rate limiting
 
-Anyone who can reach the endpoint can spend your tokens. Protect it:
+> [!CAUTION]
+> Anyone who can reach the endpoint can spend your tokens. Always add `authorize` in production.
+
+Check the session and rate-limit per user:
 
 ```ts
 export const POST = createHandler({

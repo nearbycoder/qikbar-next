@@ -2,7 +2,7 @@
 import { Code } from 'astro:components'
 import Base from '../layouts/Base.astro'
 import Icon from '../components/Icon.astro'
-import { catalog } from '../data/extensions'
+import { catalog, CATEGORIES } from '../data/extensions'
 
 const sources = import.meta.glob<string>('../extensions/*.ts', { query: '?raw', import: 'default', eager: true })
 const sourceOf = (file: string) => sources[`../extensions/${file}`] ?? ''
@@ -31,12 +31,22 @@ const iconOf = (icon: unknown) => (typeof icon === 'string' && /^https?:/.test(i
   </section>
 
   <section class="container block">
-    <h2>Examples <span>Install them here, copy them into your app</span></h2>
+    <div class="block-head">
+      <h2>Examples <span>{catalog.length} extensions · install them here, copy them into your app</span></h2>
+      <div class="filters">
+        <div class="chips" role="radiogroup" aria-label="Category">
+          <button type="button" role="radio" aria-checked="true" data-cat="">All</button>
+          {CATEGORIES.map((c) => <button type="button" role="radio" aria-checked="false" data-cat={c}>{c}</button>)}
+        </div>
+        <label class="filter-search"><Icon name="search" size={14} /><input type="search" placeholder="Filter extensions…" data-filter aria-label="Filter extensions" /></label>
+      </div>
+    </div>
+    <p class="none" data-none hidden>No extensions match.</p>
     <div class="cards">
       {catalog.map((c) => {
         const ic = iconOf(c.extension.icon)
         return (
-          <article class="card ext" data-ext={c.extension.name}>
+          <article class="card ext" data-ext={c.extension.name} data-category={c.category} data-text={`${c.extension.title} ${c.extension.description} ${c.tags.join(' ')} ${c.category}`.toLowerCase()}>
             <div class="ext-head">
               <div class="ext-icon">
                 {'url' in ic ? <img src={ic.url} alt="" width="20" height="20" loading="lazy" /> : 'emoji' in ic ? <span>{ic.emoji}</span> : <Icon name={ic.name as any} size={18} />}
@@ -50,7 +60,7 @@ const iconOf = (icon: unknown) => (typeof icon === 'string' && /^https?:/.test(i
               </button>
             </div>
             <p>{c.extension.description}</p>
-            <div class="tags">{c.tags.map((t) => <span>{t}</span>)}</div>
+            <div class="tags"><span class="cat">{c.category}</span>{c.uses && <span class="uses">{c.uses}</span>}{c.tags.map((t) => <span>{t}</span>)}</div>
             <div class="ext-foot">
               <button type="button" class="link" data-try={c.try}><Icon name="search" size={13} /> Try “{c.try}”</button>
               <details>
@@ -67,7 +77,7 @@ const iconOf = (icon: unknown) => (typeof icon === 'string' && /^https?:/.test(i
   </section>
 
   <section class="container block">
-    <h2>Built in <span>Import from <code>qikbar/extensions</code></span></h2>
+    <h2>Built in <span>Import from <code>qikbar/extensions</code>. Already installed on this site.</span></h2>
     <div class="cards small">
       {builtIns.map((b) => (
         <article class="card ext">
@@ -84,6 +94,19 @@ const iconOf = (icon: unknown) => (typeof icon === 'string' && /^https?:/.test(i
           </div>
         </article>
       ))}
+    </div>
+  </section>
+
+  <section class="container block">
+    <div class="submit card">
+      <div>
+        <h2 style="margin:0">Built something useful?</h2>
+        <p>Publish it to npm with the <code>qikbar-extension</code> keyword and open a pull request to list it here.</p>
+      </div>
+      <div class="actions" style="margin:0">
+        <a class="btn btn-primary" href="/docs/publishing-extensions">Publishing guide</a>
+        <a class="btn" href="/docs/example-extensions">Walk through the examples</a>
+      </div>
     </div>
   </section>
 </Base>
@@ -117,6 +140,30 @@ const iconOf = (icon: unknown) => (typeof icon === 'string' && /^https?:/.test(i
     }),
   )
 
+  // Filters
+  const cards = [...document.querySelectorAll<HTMLElement>('.ext[data-category]')]
+  const chips = [...document.querySelectorAll<HTMLButtonElement>('[data-cat]')]
+  const search = document.querySelector<HTMLInputElement>('[data-filter]')!
+  let cat = ''
+  const apply = () => {
+    const q = search.value.trim().toLowerCase()
+    let shown = 0
+    for (const c of cards) {
+      const ok = (!cat || c.dataset.category === cat) && (!q || q.split(/\s+/).every((w) => c.dataset.text!.includes(w)))
+      c.hidden = !ok
+      if (ok) shown++
+    }
+    document.querySelector<HTMLElement>('[data-none]')!.hidden = shown > 0
+  }
+  chips.forEach((chip) =>
+    chip.addEventListener('click', () => {
+      cat = chip.dataset.cat ?? ''
+      chips.forEach((c) => c.setAttribute('aria-checked', String(c === chip)))
+      apply()
+    }),
+  )
+  search.addEventListener('input', apply)
+
   document.querySelectorAll<HTMLDetailsElement>('.ext details').forEach((d) =>
     d.addEventListener('toggle', () => {
       const src = d.closest('.ext')!.querySelector<HTMLElement>('.source')!
@@ -131,6 +178,20 @@ const iconOf = (icon: unknown) => (typeof icon === 'string' && /^https?:/.test(i
   .block { margin-top: 72px; }
   .block h2 { font-size: 22px; letter-spacing: -0.02em; margin: 0 0 20px; display: flex; gap: 12px; align-items: baseline; flex-wrap: wrap; }
   .block h2 span { font-size: 14px; font-weight: 400; color: var(--subtle); }
+  .block-head { display: flex; flex-direction: column; gap: 4px; margin-bottom: 18px; }
+  .block-head h2 { margin: 0; }
+  .filters { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 10px; }
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chips button { height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--panel); color: var(--muted); font: 500 13px var(--font); cursor: pointer; }
+  .chips button[aria-checked='true'] { border-color: var(--brand); color: var(--text); background: var(--brand-soft); }
+  .filter-search { display: flex; align-items: center; gap: 8px; height: 34px; padding: 0 12px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg-soft); color: var(--subtle); min-width: 240px; }
+  .filter-search input { border: 0; outline: 0; background: none; color: var(--text); font: 14px var(--font); width: 100%; }
+  .none { color: var(--muted); }
+  .tags .cat { color: var(--brand); border-color: color-mix(in srgb, var(--brand) 30%, transparent); background: var(--brand-soft); font-family: var(--font); }
+  .tags .uses { font-family: var(--font); }
+  .ext[hidden] { display: none; }
+  .submit { padding: 28px 32px; display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; background: radial-gradient(400px 160px at 0% 0%, color-mix(in srgb, var(--brand) 12%, transparent), transparent 70%), var(--panel); }
+  .submit p { color: var(--muted); margin: 6px 0 0; }
   .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
   .cards.small { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   @media (max-width: 900px) { .cards, .cards.small { grid-template-columns: 1fr; } }

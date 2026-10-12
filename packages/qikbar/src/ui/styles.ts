@@ -114,7 +114,9 @@ select.qb-arg{padding-right:4px}
 .qb-actions-input::placeholder{color:var(--qb-fg-subtle)}
 
 .qb-detail{flex:1;min-width:0;overflow-y:auto;padding:18px 22px 22px;scrollbar-width:thin}
-.qb-split .qb-list{flex:0 0 40%;border-right:1px solid var(--qb-border)}
+.qb-detail:focus,.qb-chat:focus,.qb-form:focus,.qb-dialog:focus{outline:none}
+.qb-split .qb-list{flex:0 0 42%;border-right:1px solid var(--qb-border)}
+.qb-split .qb-item-accessories,.qb-split .qb-item-kind{display:none}
 .qb-split .qb-detail{padding:14px 18px}
 .qb-meta{flex:0 0 34%;border-left:1px solid var(--qb-border);padding:14px 16px;overflow-y:auto;display:flex;flex-direction:column;gap:12px;font-size:13px}
 .qb-meta-label{color:var(--qb-fg-subtle);font-size:12px;margin-bottom:2px}

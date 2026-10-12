@@ -326,9 +326,42 @@ html.dark .theme-toggle .moon {
   display: none;
 }
 
+.menu-btn {
+  display: none;
+}
+
+.mobile-nav {
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.mobile-nav .container {
+  display: grid;
+  padding: 8px 0 14px;
+}
+
+.mobile-nav a {
+  padding: 10px 4px;
+  font-size: 16px;
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 1px solid var(--border);
+}
+
+.mobile-nav a:last-child {
+  border: 0;
+}
+
+.mobile-nav a[aria-current='page'] {
+  color: var(--text);
+}
+
 @media (max-width: 860px) {
   .nav-links {
     display: none;
+  }
+  .menu-btn {
+    display: inline-grid;
   }
   .search-trigger {
     width: auto;

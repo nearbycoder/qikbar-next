@@ -1,7 +1,7 @@
 import { getCollection, type CollectionEntry } from 'astro:content'
 import promptText from '../../public/prompt.txt?raw'
 
-export const GROUPS = ['Getting Started', 'Core Concepts', 'AI', 'Extensions', 'Customization', 'Frameworks', 'Reference'] as const
+export const GROUPS = ['Getting Started', 'Core Concepts', 'AI', 'Extensions', 'Customization', 'Frameworks', 'Recipes', 'Reference'] as const
 
 export type Doc = CollectionEntry<'docs'>
 

@@ -42,8 +42,7 @@ document.querySelector('#search')!.addEventListener('click', () => bar.open())
 
 ## Angular
 
-```ts
-// command-bar.service.ts
+```ts title="command-bar.service.ts"
 import { Injectable, OnDestroy, inject } from '@angular/core'
 import { Router } from '@angular/router'
 import { createQikbar, type QikbarInstance } from 'qikbar'

@@ -5,8 +5,7 @@ group: Frameworks
 order: 4
 ---
 
-```svelte
-<!-- src/routes/+layout.svelte -->
+```svelte title="src/routes/+layout.svelte"
 <script lang="ts">
   import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
@@ -35,8 +34,7 @@ SvelteKit intercepts anchor clicks, so the [default navigator](/docs/routing#the
 
 ## Share the instance
 
-```ts
-// src/lib/qikbar.ts
+```ts title="src/lib/qikbar.ts"
 import { createQikbar } from 'qikbar'
 export const bar = typeof window !== 'undefined' ? createQikbar({ autoIndex: true }) : undefined
 ```
@@ -55,8 +53,7 @@ export const bar = typeof window !== 'undefined' ? createQikbar({ autoIndex: tru
 
 ## AI endpoint
 
-```ts
-// src/routes/api/qikbar/+server.ts
+```ts title="src/routes/api/qikbar/+server.ts"
 import { createHandler, anthropic } from 'qikbar/server'
 import { ANTHROPIC_API_KEY } from '$env/static/private'
 

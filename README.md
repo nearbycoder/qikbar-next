@@ -14,6 +14,7 @@
   <a href="https://qikbar.com/docs">Docs</a> ·
   <a href="https://qikbar.com/extensions">Extensions</a> ·
   <a href="https://qikbar.com/themes">Theme builder</a> ·
+  <a href="https://qikbar.com/playground">Playground</a> ·
   <a href="https://qikbar.com/llms.txt">llms.txt</a>
 </p>
 
@@ -50,7 +51,7 @@ Press <kbd>⌘K</kbd>.
 - **Actions**: primary and secondary actions, a Raycast-style action panel (<kbd>⌘.</kbd>), shortcuts, inline arguments, confirmations and toasts.
 - **Live sources**: search your API as the user types, with debouncing and cancellation.
 - **AI that acts**: <kbd>Tab</kbd> to ask. The model can run your commands, search your sources and read the page. Works with Claude, GPT, Gemini, Ollama, any OpenAI-compatible API, Chrome's on-device model, a server proxy, or the user's own key. No SDKs.
-- **Extensions**: package commands, sources, AI tools and preferences into a portable bundle, inspired by Raycast.
+- **Extensions**: package commands, sources, AI tools and preferences into a portable bundle, inspired by Raycast. Six are built in, and [eleven examples](apps/web/src/extensions) cover weather, currency, npm, Wikipedia, bookmarks, GitHub and more.
 - **Theming**: 14 presets, 30+ CSS variables, automatic light and dark, Tailwind-friendly slot classes, or unstyled.
 - **Tiny and fast**: zero dependencies, about 3.5 KB to boot, the UI loads when the browser is idle, and virtualized lists handle 100k rows.
 - **Accessible**: ARIA combobox and listbox, focus management, reduced motion.
@@ -76,7 +77,7 @@ A script-tag build is also available: `<script src="https://unpkg.com/qikbar/dis
 
 ```
 packages/qikbar   The library (TypeScript, zero dependencies)
-apps/web          qikbar.com: marketing site, docs, theme builder, extensions (Astro)
+apps/web          qikbar.com: marketing site, docs, recipes, playground, theme builder, extensions (Astro)
 examples/vanilla  A plain HTML example
 examples/react    A React + Vite example
 ```

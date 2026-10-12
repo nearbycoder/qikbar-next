@@ -38,6 +38,7 @@ export function App() {
 
 Props update the running instance, and only changed keys are applied. Callbacks (`navigate`, `onOpen`, `onClose`, `onRun`) can be inline functions. They're wrapped, so changing them never reconfigures the bar.
 
+> [!IMPORTANT]
 > Create extension instances **outside** the component, or memoize them, so they aren't reinstalled on every render.
 
 `<Qikbar>` can also wrap your app and act as a provider, though hooks work without it:

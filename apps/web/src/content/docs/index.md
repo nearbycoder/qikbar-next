@@ -54,8 +54,15 @@ That's a complete integration. Press <kbd>⌘</kbd><kbd>K</kbd>.
 
 Everything is **plain data**. A command is an object, a view is an object, and an action is an object with a `run` function. You can generate them, serialize most of them, and an AI model can reason about them.
 
-## Next steps
+## Where to go next
 
-- [Install Qikbar](/docs/installation)
-- [Follow the quick start](/docs/quick-start)
-- [Let your coding agent set it up](/docs/ai-setup)
+<div class="doc-cards">
+  <a href="/docs/quick-start"><strong>Quick start</strong><span>Routes, commands, search and a form in five minutes.</span></a>
+  <a href="/docs/ai-setup"><strong>Set up with AI</strong><span>One prompt for Claude Code, Cursor or Copilot.</span></a>
+  <a href="/docs/views"><strong>Views</strong><span>Lists, grids, Markdown, forms and chats.</span></a>
+  <a href="/docs/ai"><strong>AI</strong><span>Let users ask, and let the model act.</span></a>
+  <a href="/docs/extensions"><strong>Extensions</strong><span>Package and share functionality.</span></a>
+  <a href="/docs/theming"><strong>Theming</strong><span>Presets, variables and your design tokens.</span></a>
+  <a href="/docs/react"><strong>React</strong><span>The component, hooks and a trigger button.</span></a>
+  <a href="/docs/recipes-backend-search"><strong>Recipes</strong><span>Backend search, switchers, copilots and more.</span></a>
+</div>

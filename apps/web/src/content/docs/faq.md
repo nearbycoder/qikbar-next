@@ -2,7 +2,7 @@
 title: FAQ
 description: Common questions about Qikbar.
 group: Reference
-order: 5
+order: 6
 ---
 
 ### Is it really free?

@@ -21,6 +21,7 @@ export const bar = createQikbar({
 
 Press <kbd>⌘</kbd><kbd>K</kbd>. The bar is empty, so let's fill it.
 
+> [!TIP]
 > Using React? Render `<Qikbar />` from `qikbar/react` instead. It takes the same options as props. See [React](/docs/react).
 
 ## 2. Add routes

@@ -7,8 +7,7 @@ order: 2
 
 ## 1. A client component
 
-```tsx
-// app/command-bar.tsx
+```tsx title="app/command-bar.tsx"
 'use client'
 
 import { useRouter } from 'next/navigation'
@@ -51,8 +50,7 @@ Define the `sources` array outside the component, or memoize it, if you don't wa
 
 ## 2. Mount it in the root layout
 
-```tsx
-// app/layout.tsx
+```tsx title="app/layout.tsx"
 import { CommandBar } from './command-bar'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -69,8 +67,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
 ## 3. Optional: an AI route
 
-```ts
-// app/api/qikbar/route.ts
+```ts title="app/api/qikbar/route.ts"
 import { createHandler, anthropic } from 'qikbar/server'
 import { auth } from '@/auth'
 

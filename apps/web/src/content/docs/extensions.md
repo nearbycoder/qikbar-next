@@ -87,7 +87,8 @@ defineExtension({
 })
 ```
 
-**If a required preference is missing**, the first time the user runs a command, Qikbar shows a *Configure GitHub* form. It saves the values (namespaced in storage) and then runs the command. Users can change them later with the *Configure GitHub* action in the action panel (<kbd>⌘</kbd><kbd>.</kbd>).
+> [!NOTE]
+> **If a required preference is missing**, the first time the user runs a command, Qikbar shows a *Configure GitHub* form. It saves the values (namespaced in storage) and then runs the command. Users can change them later with the *Configure GitHub* action in the action panel (<kbd>⌘</kbd><kbd>.</kbd>).
 
 Apps can also provide values when installing, so users never see the form:
 

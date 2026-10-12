@@ -2,7 +2,7 @@
 title: Publishing extensions
 description: Share your extension on npm so any Qikbar app can install it.
 group: Extensions
-order: 3
+order: 4
 ---
 
 Extensions are plain ES modules, so publishing one is the same as publishing any small package.

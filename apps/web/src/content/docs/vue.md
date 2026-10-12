@@ -7,8 +7,7 @@ order: 3
 
 Qikbar doesn't need a Vue wrapper. Create it once and use it from anywhere.
 
-```ts
-// src/command-bar.ts
+```ts title="src/command-bar.ts"
 import { createQikbar } from 'qikbar'
 import { calculator, themeSwitcher } from 'qikbar/extensions'
 import router from './router'
@@ -22,15 +21,13 @@ export const bar = createQikbar({
 })
 ```
 
-```ts
-// src/main.ts
+```ts title="src/main.ts"
 import './command-bar'
 ```
 
 ## A composable for contextual commands
 
-```ts
-// src/composables/useCommands.ts
+```ts title="src/composables/useCommands.ts"
 import { onMounted, onUnmounted, watch, type Ref } from 'vue'
 import type { Command } from 'qikbar'
 import { bar } from '../command-bar'
@@ -66,8 +63,7 @@ useCommands(computed(() => [{ title: `Archive ${props.project.name}`, icon: 'tra
 
 Create a client-only plugin:
 
-```ts
-// plugins/qikbar.client.ts
+```ts title="plugins/qikbar.client.ts"
 import { createQikbar } from 'qikbar'
 
 export default defineNuxtPlugin(() => {

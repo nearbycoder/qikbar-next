@@ -3,6 +3,7 @@ title: AI
 description: Chat, answers and natural-language actions with any model. The AI can run your app's commands as tools.
 group: AI
 order: 1
+label: Overview
 ---
 
 Add one option and your command bar becomes an assistant that can act on the user's behalf:
@@ -65,6 +66,9 @@ Passing a provider directly (`ai: anthropic()`) uses the defaults.
 | [`byok()`](/docs/ai-providers#bring-your-own-key) | Users bring their own key | Each user's own browser |
 | `anthropic({ apiKey })` in the browser | Prototypes, internal tools, local dev | Visible to anyone who opens devtools ⚠️ |
 | [`browserAI()`](/docs/ai-providers#chrome-built-in-ai) | Free, private, on-device | None |
+
+> [!WARNING]
+> An API key in browser code is public. Anyone can copy it from devtools. Use a [server proxy](/docs/ai-server) for anything real.
 
 ## Using AI in your own commands
 

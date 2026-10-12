@@ -14,9 +14,14 @@ const nav = [
   { href: '/docs', label: 'Docs' },
   { href: '/extensions', label: 'Extensions' },
   { href: '/themes', label: 'Themes' },
+  { href: '/playground', label: 'Playground' },
   { href: '/docs/ai', label: 'AI' },
 ]
 const canonical = new URL(path, Astro.site)
+const clean = path.replace(/\/$/, '') || '/'
+const active = nav
+  .filter((n) => clean === n.href || clean.startsWith(`${n.href}/`))
+  .sort((a, b) => b.href.length - a.href.length)[0]?.href
 ---
 <!doctype html>
 <html lang="en" class="dark">
@@ -32,7 +37,11 @@ const canonical = new URL(path, Astro.site)
     <meta property="og:description" content={description} />
     <meta property="og:type" content="website" />
     <meta property="og:url" content={canonical} />
-    <meta name="twitter:card" content="summary" />
+    <meta property="og:image" content={new URL('/og.png', Astro.site)} />
+    <meta property="og:image:width" content="1280" />
+    <meta property="og:image:height" content="672" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content={new URL('/og.png', Astro.site)} />
     <meta name="theme-color" content="#08090b" />
     <script is:inline>
       try {
@@ -53,7 +62,7 @@ const canonical = new URL(path, Astro.site)
           qikbar
         </a>
         <nav class="nav-links" aria-label="Main">
-          {nav.map((n) => <a href={n.href} aria-current={path.startsWith(n.href) ? 'page' : undefined}>{n.label}</a>)}
+          {nav.map((n) => <a href={n.href} aria-current={n.href === active ? 'page' : undefined}>{n.label}</a>)}
         </nav>
         <div class="header-right">
           <button class="search-trigger" type="button" data-qikbar-open aria-label="Search or ask AI">
@@ -66,8 +75,17 @@ const canonical = new URL(path, Astro.site)
             <span class="sun"><Icon name="sun" /></span>
           </button>
           <a class="icon-btn" href="https://github.com/nearbycoder/qikbar-next" aria-label="GitHub"><Icon name="github" /></a>
+          <button class="icon-btn menu-btn" type="button" aria-label="Menu" aria-expanded="false" aria-controls="mobile-nav" data-menu-toggle>
+            <Icon name="list" />
+          </button>
         </div>
       </div>
+      <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile" hidden>
+        <div class="container">
+          {nav.map((n) => <a href={n.href} aria-current={n.href === active ? 'page' : undefined}>{n.label}</a>)}
+          <a href="https://github.com/nearbycoder/qikbar-next">GitHub</a>
+        </div>
+      </nav>
     </header>
     <main id="main">
       <slot />
@@ -85,6 +103,7 @@ const canonical = new URL(path, Astro.site)
             <li><a href="/extensions">Extensions</a></li>
             <li><a href="/themes">Theme builder</a></li>
             <li><a href="/docs/ai">AI</a></li>
+            <li><a href="/playground">Playground</a></li>
           </ul>
         </div>
         <div>
@@ -113,6 +132,14 @@ const canonical = new URL(path, Astro.site)
 
       const label = formatHotkey('mod+k')[0]!.join(isMac ? '' : ' ')
       document.querySelectorAll('[data-mod-k]').forEach((el) => (el.textContent = label))
+
+      const menuBtn = document.querySelector<HTMLButtonElement>('[data-menu-toggle]')
+      const menu = document.getElementById('mobile-nav')
+      menuBtn?.addEventListener('click', () => {
+        const open = menuBtn.getAttribute('aria-expanded') !== 'true'
+        menuBtn.setAttribute('aria-expanded', String(open))
+        if (menu) menu.hidden = !open
+      })
 
       document.querySelector('[data-theme-toggle]')?.addEventListener('click', () => {
         const dark = !document.documentElement.classList.contains('dark')

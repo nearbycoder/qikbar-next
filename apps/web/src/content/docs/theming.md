@@ -93,7 +93,8 @@ createQikbar({
 })
 ```
 
-For example, this maps Qikbar onto **shadcn/ui** tokens.
+> [!TIP]
+> This example maps Qikbar onto **shadcn/ui** tokens. Any design system with CSS variables works the same way.
 
 ## Pure CSS
 

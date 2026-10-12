@@ -34,4 +34,5 @@ Select the command and press <kbd>↵</kbd> or <kbd>Tab</kbd>. The fields appear
 
 When the AI runs a command, it fills in the arguments itself.
 
+> [!TIP]
 > Need more than two or three inputs, or validation? Use a [form view](/docs/views#form).

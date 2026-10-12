@@ -1,0 +1,127 @@
+---
+import Base from '../layouts/Base.astro'
+import Icon from '../components/Icon.astro'
+import { examples } from '../data/playground'
+---
+
+<Base title="Playground" description="Edit a Qikbar config and see the command bar update live.">
+  <div class="container pg-head">
+    <div>
+      <span class="eyebrow"><Icon name="code" size={14} /> Playground</span>
+      <h1>Try Qikbar in your browser.</h1>
+      <p>Edit the config on the left and press <kbd>⌘</kbd><kbd>↵</kbd> (or <kbd>Ctrl</kbd><kbd>↵</kbd>) to rebuild the bar on the right. Pick an example to start.</p>
+    </div>
+  </div>
+  <div class="container pg">
+    <section class="editor card">
+      <div class="toolbar">
+        <div class="tabs" role="tablist">
+          {examples.map((e, i) => <button type="button" role="tab" aria-selected={i === 0 ? 'true' : 'false'} data-example={i}>{e.name}</button>)}
+        </div>
+        <div class="tools">
+          <button type="button" class="tool" data-share title="Copy a link to this code"><Icon name="link" size={13} /> Share</button>
+          <button type="button" class="btn btn-brand run" data-run><Icon name="zap" size={14} /> Run <span class="kbd" data-run-kbd>⌘↵</span></button>
+        </div>
+      </div>
+      <textarea spellcheck="false" autocapitalize="off" autocomplete="off" data-code aria-label="Configuration code"></textarea>
+      <div class="error" data-error hidden></div>
+    </section>
+    <section class="preview">
+      <div id="pg-bar"></div>
+      <p class="hint">Helpers in scope: <code>list grid detail form chat action defineExtension extensions demoAI</code></p>
+    </section>
+  </div>
+</Base>
+
+<script>
+  import * as Q from 'qikbar'
+  import * as extensions from 'qikbar/extensions'
+  import { demoAI } from '../scripts/demo-ai'
+  import { examples } from '../data/playground'
+
+  const code = document.querySelector<HTMLTextAreaElement>('[data-code]')!
+  const errorEl = document.querySelector<HTMLElement>('[data-error]')!
+  const tabs = [...document.querySelectorAll<HTMLButtonElement>('[data-example]')]
+  let bar: Q.QikbarInstance | undefined
+
+  const scope = { ...Q, extensions, demoAI }
+  if (!Q.isMac) document.querySelector('[data-run-kbd]')!.textContent = 'Ctrl ↵'
+
+  function run() {
+    errorEl.hidden = true
+    let config: Q.QikbarConfig
+    try {
+      // eslint-disable-next-line no-new-func
+      config = new Function(...Object.keys(scope), code.value)(...Object.values(scope)) ?? {}
+    } catch (err) {
+      errorEl.textContent = String(err instanceof Error ? err.message : err)
+      errorEl.hidden = false
+      return
+    }
+    bar?.destroy()
+    document.getElementById('pg-bar')!.replaceChildren()
+    bar = Q.createQikbar({ ...config, inline: '#pg-bar', hotkey: false, shortcuts: false, namespace: 'qikbar-playground' })
+  }
+
+  const encode = (s: string) => btoa(unescape(encodeURIComponent(s)))
+  const decode = (s: string) => decodeURIComponent(escape(atob(s)))
+
+  function load(i: number) {
+    tabs.forEach((t, j) => t.setAttribute('aria-selected', String(i === j)))
+    code.value = examples[i]!.code
+    history.replaceState(null, '', location.pathname)
+    run()
+  }
+
+  tabs.forEach((t, i) => t.addEventListener('click', () => load(i)))
+  document.querySelector('[data-run]')!.addEventListener('click', run)
+  code.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault()
+      run()
+    } else if (e.key === 'Tab' && !e.shiftKey) {
+      e.preventDefault()
+      code.setRangeText('  ', code.selectionStart, code.selectionEnd, 'end')
+    }
+  })
+  document.querySelector('[data-share]')!.addEventListener('click', async () => {
+    const url = `${location.origin}${location.pathname}#code=${encode(code.value)}`
+    history.replaceState(null, '', url)
+    await navigator.clipboard.writeText(url)
+    window.qikbar.toast({ title: 'Link copied', style: 'success' })
+  })
+
+  const shared = location.hash.match(/^#code=(.+)$/)?.[1]
+  if (shared) {
+    try {
+      code.value = decode(shared)
+      tabs.forEach((t) => t.setAttribute('aria-selected', 'false'))
+      run()
+    } catch {
+      load(0)
+    }
+  } else load(0)
+</script>
+
+<style>
+  .pg-head { padding: 48px 0 24px; }
+  .pg-head h1 { font-size: clamp(30px, 4vw, 44px); letter-spacing: -0.035em; margin: 10px 0 8px; }
+  .pg-head p { color: var(--muted); margin: 0; }
+  .pg { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+  @media (max-width: 1000px) { .pg { grid-template-columns: 1fr; } }
+  .editor { display: flex; flex-direction: column; overflow: hidden; min-height: 560px; }
+  .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 8px 0 8px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .tabs { display: flex; gap: 2px; overflow-x: auto; }
+  .tabs button { padding: 8px 10px 10px; border: 0; background: none; color: var(--subtle); font: 500 13px var(--font); border-bottom: 2px solid transparent; margin-bottom: -1px; cursor: pointer; white-space: nowrap; }
+  .tabs button[aria-selected='true'] { color: var(--text); border-bottom-color: var(--brand); }
+  .tools { display: flex; gap: 6px; align-items: center; padding-bottom: 8px; }
+  .tool { display: inline-flex; gap: 6px; align-items: center; height: 32px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--muted); font: 500 12.5px var(--font); cursor: pointer; }
+  .tool:hover { color: var(--text); }
+  .run { height: 32px; font-size: 13px; padding: 0 12px; }
+  .run .kbd { height: 18px; font-size: 10.5px; color: inherit; border-color: color-mix(in srgb, var(--brand-ink) 30%, transparent); background: transparent; }
+  textarea { flex: 1; min-height: 520px; width: 100%; resize: vertical; border: 0; outline: none; padding: 18px 20px; background: var(--code-bg); color: var(--text); font: 13px/1.65 var(--mono); tab-size: 2; white-space: pre; }
+  .error { padding: 12px 16px; border-top: 1px solid var(--border); color: #ef4444; font: 12.5px var(--mono); background: rgba(239, 68, 68, 0.08); }
+  .preview { position: sticky; top: calc(var(--header) + 20px); padding: 28px clamp(8px, 2vw, 28px); border-radius: var(--radius); border: 1px solid var(--border); background: radial-gradient(circle at 30% 0%, color-mix(in srgb, var(--brand) 12%, transparent), transparent 55%), var(--bg-soft); }
+  .hint { margin: 16px 2px 0; font-size: 12.5px; color: var(--subtle); }
+  .hint code { font-size: 12px; }
+</style>

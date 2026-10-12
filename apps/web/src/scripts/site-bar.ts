@@ -31,6 +31,7 @@ export const bar = createQikbar({
     { path: '/docs', title: 'Documentation', icon: 'book', section: 'Qikbar', keywords: ['docs', 'guide'] },
     { path: '/themes', title: 'Theme Builder', icon: 'palette', section: 'Qikbar', keywords: ['colors', 'presets', 'css'] },
     { path: '/extensions', title: 'Extensions', icon: 'puzzle', section: 'Qikbar', keywords: ['plugins', 'store'] },
+    { path: '/playground', title: 'Playground', icon: 'code', section: 'Qikbar', keywords: ['try', 'sandbox', 'editor', 'demo'] },
   ],
   commands: [
     { title: 'View on GitHub', icon: 'github', url: 'https://github.com/nearbycoder/qikbar-next', section: 'Qikbar', keywords: ['source', 'repo', 'star'] },
