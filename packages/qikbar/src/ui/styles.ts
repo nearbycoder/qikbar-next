@@ -1,5 +1,5 @@
-import { baseDark, baseLight, cssVarName } from './themes'
-import type { ThemeVars } from '../core/types'
+import { baseDark, baseLight, cssVarName } from './themes.js'
+import type { ThemeVars } from '../core/types.js'
 
 const vars = (v: ThemeVars) =>
   Object.entries(v)
@@ -9,7 +9,7 @@ const vars = (v: ThemeVars) =>
 /**
  * Default stylesheet. Every visual decision reads from a `--qb-*` custom
  * property so you can theme Qikbar without touching selectors.
- * The same CSS ships as `qikbar/styles.css` if you prefer a `<link>`.
+ * The same CSS ships as `@qikbar/qikbar/styles.css` if you prefer a `<link>`.
  */
 export const css = /* css */ `
 .qb-root{${vars(baseLight)}--qb-z:2147483000;--qb-ease:cubic-bezier(.16,1,.3,1);font-family:var(--qb-font);font-size:var(--qb-font-size);line-height:1.45;color:var(--qb-fg);-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;text-align:start;color-scheme:light}

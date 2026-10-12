@@ -16,11 +16,11 @@ jobs:
           node-version: 22
       - run: bun install --frozen-lockfile
       - name: Typecheck library
-        run: bun run --filter qikbar typecheck
+        run: bun run --filter @qikbar/qikbar typecheck
       - name: Test library
-        run: bun run --filter qikbar test
+        run: bun run --filter @qikbar/qikbar test
       - name: Build library
-        run: bun run --filter qikbar build
+        run: bun run --filter @qikbar/qikbar build
       - name: Check website
         run: cd apps/web && bunx astro check
       - name: Build website

@@ -8,7 +8,7 @@ order: 1
 An **extension** is a portable bundle of functionality. If you've built a Raycast extension, this will feel familiar. The difference is that it's framework-agnostic and runs in any web app that uses Qikbar.
 
 ```ts
-import { defineExtension, list, action } from 'qikbar'
+import { defineExtension, list, action } from '@qikbar/qikbar'
 
 export default defineExtension({
   name: 'hacker-news',

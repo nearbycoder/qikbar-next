@@ -10,7 +10,7 @@ order: 1
 Creates a command bar and returns an [instance](#instance). It's safe to call during SSR, where it does nothing until it runs in a browser.
 
 ```ts
-import { createQikbar } from 'qikbar'
+import { createQikbar } from '@qikbar/qikbar'
 const bar = createQikbar({ /* config */ })
 ```
 
@@ -79,30 +79,30 @@ bar.on('change', ({ open, query, depth, loading }) => {})
 
 ## Exports
 
-### `qikbar`
+### `@qikbar/qikbar`
 
 `createQikbar`, `list`, `grid`, `detail`, `form`, `chat`, `action`, `defineExtension`, `defineCommands`, `defineSource`, `defineTool`, `anthropic`, `openai`, `openaiCompatible`, `ollama`, `gemini`, `browserAI`, `proxy`, `byok`, `formatHotkey`, `parseHotkey`, `matchesHotkey`, `isMac`, `memoryStorage`, `version`, and all types.
 
-### `qikbar/react`
+### `@qikbar/qikbar/react`
 
 `Qikbar`, `QikbarProvider`, `QikbarTrigger`, `useQikbar`, `useCommands`, `useSource`, `useExtension`.
 
-### `qikbar/server`
+### `@qikbar/qikbar/server`
 
 `createHandler`, `toNodeHandler`, `anthropic`, `openai`, `openaiCompatible`, `ollama`, `gemini`.
 
-### `qikbar/extensions`
+### `@qikbar/qikbar/extensions`
 
 `calculator`, `themeSwitcher`, `page`, `aiActions`, `shortcuts`, `shortcutLabel`, `evaluate`, `convert`, `formatNumber`.
 
-### `qikbar/theme`
+### `@qikbar/qikbar/theme`
 
 `presets`, `baseLight`, `baseDark`, `resolveThemeVars`, `themeToCss`, `cssVarName`, `css`.
 
-### `qikbar/utils`
+### `@qikbar/qikbar/utils`
 
 `rank`, `matchItem`, `fuzzyMatch`, `normalize`, `renderMarkdown`, `escapeHtml`, `icons`, `iconSvg`, `Frecency`, `SequenceMatcher`, `copyText`, `defaultNavigate`, and the storage and hotkey helpers. Use these to build your own UI on Qikbar's ranking.
 
 ## Types
 
-All types are exported from `qikbar`: `QikbarConfig`, `QikbarInstance`, `Command`, `Item`, `Action`, `Accessory`, `Icon`, `View`, `ListView`, `GridView`, `DetailView`, `FormView`, `FormField`, `ChatView`, `Source`, `Extension`, `ExtensionCommand`, `Preference`, `Argument`, `Tool`, `Context`, `AIProvider`, `AIEvent`, `AIMessage`, `ThemeVars`, `ThemeConfig` and more.
+All types are exported from `@qikbar/qikbar`: `QikbarConfig`, `QikbarInstance`, `Command`, `Item`, `Action`, `Accessory`, `Icon`, `View`, `ListView`, `GridView`, `DetailView`, `FormView`, `FormField`, `ChatView`, `Source`, `Extension`, `ExtensionCommand`, `Preference`, `Argument`, `Tool`, `Context`, `AIProvider`, `AIEvent`, `AIMessage`, `ThemeVars`, `ThemeConfig` and more.

@@ -1,8 +1,8 @@
-import type { Action, ChatView, DetailView, FormField, FormView, GridView, Item, ListView } from '../core/types'
-import type { Bar, Frame, Row } from './bar'
-import { copyText } from './nav'
-import { h, highlight, renderAccessory, renderIcon, renderKbd, renderTag } from './dom'
-import { renderMarkdown } from './markdown'
+import type { Action, ChatView, DetailView, FormField, FormView, GridView, Item, ListView } from '../core/types.js'
+import type { Bar, Frame, Row } from './bar.js'
+import { copyText } from './nav.js'
+import { h, highlight, renderAccessory, renderIcon, renderKbd, renderTag } from './dom.js'
+import { renderMarkdown } from './markdown.js'
 
 export interface ViewRenderer {
   readonly frame: Frame

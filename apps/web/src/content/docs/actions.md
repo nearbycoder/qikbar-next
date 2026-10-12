@@ -43,7 +43,7 @@ The action list for an item is assembled in this order:
 ## Built-in helpers
 
 ```ts
-import { action } from 'qikbar'
+import { action } from '@qikbar/qikbar'
 
 action.copy(text | () => text, options?)   // Copy to Clipboard (⌘C)
 action.open(url, options?)                 // Open in Browser

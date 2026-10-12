@@ -6,7 +6,7 @@ order: 1
 ---
 
 ```bash
-npm install qikbar
+npm install @qikbar/qikbar
 ```
 
 ## `<Qikbar>`
@@ -14,8 +14,8 @@ npm install qikbar
 Render it once, near the root. Every [config option](/docs/api#config) is a prop:
 
 ```tsx
-import { Qikbar } from 'qikbar/react'
-import { calculator, themeSwitcher } from 'qikbar/extensions'
+import { Qikbar } from '@qikbar/qikbar/react'
+import { calculator, themeSwitcher } from '@qikbar/qikbar/extensions'
 
 const extensions = [calculator(), themeSwitcher()]
 
@@ -54,7 +54,7 @@ Props update the running instance, and only changed keys are applied. Callbacks 
 Register commands while a component is mounted. This is ideal for page-specific actions:
 
 ```tsx
-import { useCommands } from 'qikbar/react'
+import { useCommands } from '@qikbar/qikbar/react'
 
 function ProjectPage({ project }) {
   useCommands(
@@ -115,4 +115,4 @@ It renders the label and the platform-correct shortcut (⌘K or Ctrl K) after hy
 
 ## Server components
 
-`qikbar/react` is marked `"use client"`. Import it from a client component.
+`@qikbar/qikbar/react` is marked `"use client"`. Import it from a client component.

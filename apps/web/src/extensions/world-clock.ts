@@ -1,4 +1,4 @@
-import { action, defineExtension, list, type Item } from 'qikbar'
+import { action, defineExtension, list, type Item } from '@qikbar/qikbar'
 
 const CITIES: [string, string][] = [
   ['San Francisco', 'America/Los_Angeles'], ['New York', 'America/New_York'], ['São Paulo', 'America/Sao_Paulo'],

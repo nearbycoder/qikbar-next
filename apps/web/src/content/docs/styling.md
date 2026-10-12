@@ -60,7 +60,7 @@ Skip the default styles completely and write your own:
 createQikbar({ unstyled: true })
 ```
 
-You can start from the default stylesheet with `import 'qikbar/styles.css'` (or copy it), then edit it.
+You can start from the default stylesheet with `import '@qikbar/qikbar/styles.css'` (or copy it), then edit it.
 
 ## Content Security Policy
 
@@ -73,7 +73,7 @@ createQikbar({ nonce: window.__CSP_NONCE__ })
 Or link the stylesheet yourself:
 
 ```ts
-import 'qikbar/styles.css'
+import '@qikbar/qikbar/styles.css'
 createQikbar({ unstyled: true })
 ```
 

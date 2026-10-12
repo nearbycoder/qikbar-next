@@ -23,14 +23,14 @@ qikbar-extension-linear/
   "type": "module",
   "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
   "keywords": ["qikbar-extension", "qikbar", "linear"],
-  "peerDependencies": { "qikbar": "^1.0.0" }
+  "peerDependencies": { "@qikbar/qikbar": "^0.1.0" }
 }
 ```
 
 ## Conventions
 
 - **Name** it `qikbar-extension-<thing>` or `@scope/qikbar-<thing>`, and add the `qikbar-extension` keyword so the [extensions page](/extensions) can find it.
-- List `qikbar` as a **peer dependency**. Only import types and helpers (`defineExtension`, `list`, `action`) from it.
+- List `@qikbar/qikbar` as a **peer dependency**. Only import types and helpers (`defineExtension`, `list`, `action`) from it.
 - **Export a factory** when the extension takes options: `export function linear(options) { … }`.
 - **Declare preferences** instead of reading environment variables. The app can pass values at install time.
 - **Respect `ctx.signal`** in every `fetch`.

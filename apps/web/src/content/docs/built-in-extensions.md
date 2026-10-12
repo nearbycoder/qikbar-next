@@ -6,8 +6,8 @@ order: 2
 ---
 
 ```ts
-import { calculator, themeSwitcher, page, aiActions, shortcuts } from 'qikbar/extensions'
-import { byok } from 'qikbar'
+import { calculator, themeSwitcher, page, aiActions, shortcuts } from '@qikbar/qikbar/extensions'
+import { byok } from '@qikbar/qikbar'
 
 createQikbar({ extensions: [calculator(), themeSwitcher(), page(), aiActions(), shortcuts(), byok.settings()] })
 ```

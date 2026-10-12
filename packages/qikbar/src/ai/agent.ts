@@ -1,4 +1,4 @@
-import type { AIClient, AIMessage, AIProvider, AIToolCall, AIToolDefinition } from '../core/types'
+import type { AIClient, AIMessage, AIProvider, AIToolCall, AIToolDefinition } from '../core/types.js'
 
 /** Create the simple `ask` / `stream` client exposed as `ctx.ai`. */
 export function createAIClient(provider: AIProvider, defaultSystem?: string): AIClient {

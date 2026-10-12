@@ -8,7 +8,7 @@ order: 2
 Providers are tiny, dependency-free adapters that stream over `fetch`. They all implement the same interface, so you can switch models by changing one line.
 
 ```ts
-import { anthropic, openai, gemini, openaiCompatible, ollama, browserAI, proxy, byok } from 'qikbar'
+import { anthropic, openai, gemini, openaiCompatible, ollama, browserAI, proxy, byok } from '@qikbar/qikbar'
 ```
 
 ## Anthropic (Claude)
@@ -84,7 +84,7 @@ proxy({ url: '/api/qikbar', headers: async () => ({ authorization: `Bearer ${awa
 Let each user paste their own key. It's stored only in their browser:
 
 ```ts
-import { byok } from 'qikbar'
+import { byok } from '@qikbar/qikbar'
 
 createQikbar({
   ai: byok(),
@@ -99,7 +99,7 @@ Users choose Anthropic, OpenAI, Gemini or any OpenAI-compatible endpoint, and op
 A provider is an object with a `stream` method that yields events:
 
 ```ts
-import type { AIProvider } from 'qikbar'
+import type { AIProvider } from '@qikbar/qikbar'
 
 const myProvider: AIProvider = {
   id: 'my-llm',

@@ -4,9 +4,9 @@
  * Calls made before the UI loads are queued and replayed in order.
  */
 
-import type { Bar } from '../ui/bar'
-import { allowedInInput, isEditable, matchesHotkey } from './hotkeys'
-import type { AIClient, Extension, Item, QikbarConfig, QikbarEvents, QikbarInstance, Source, ToastHandle, ToastOptions, View } from './types'
+import type { Bar } from '../ui/bar.js'
+import { allowedInInput, isEditable, matchesHotkey } from './hotkeys.js'
+import type { AIClient, Extension, Item, QikbarConfig, QikbarEvents, QikbarInstance, Source, ToastHandle, ToastOptions, View } from './types.js'
 
 type Loader = () => Promise<{ Bar: typeof Bar }>
 

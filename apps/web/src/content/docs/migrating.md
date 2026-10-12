@@ -24,7 +24,7 @@ cmdk is a set of unstyled React primitives. You compose `<Command.Input>`, `<Com
 <Qikbar routes={[{ path: '/settings', title: 'Settings', section: 'Pages' }]} navigate={router.push} />
 ```
 
-You no longer need open state, hotkey wiring, nested-page state or a filter function. If you need total control over markup, use `rank` from `qikbar/utils` with your own UI.
+You no longer need open state, hotkey wiring, nested-page state or a filter function. If you need total control over markup, use `rank` from `@qikbar/qikbar/utils` with your own UI.
 
 ## From kbar
 

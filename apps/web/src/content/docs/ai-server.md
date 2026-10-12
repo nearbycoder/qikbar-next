@@ -15,7 +15,7 @@ createQikbar({ ai: proxy('/api/qikbar') })
 ## Next.js (App Router)
 
 ```ts title="app/api/qikbar/route.ts"
-import { createHandler, anthropic } from 'qikbar/server'
+import { createHandler, anthropic } from '@qikbar/qikbar/server'
 
 export const POST = createHandler({
   provider: anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }),
@@ -26,7 +26,7 @@ export const POST = createHandler({
 
 ```ts
 import { Hono } from 'hono'
-import { createHandler, openai } from 'qikbar/server'
+import { createHandler, openai } from '@qikbar/qikbar/server'
 
 const qikbar = createHandler({ provider: openai({ apiKey: process.env.OPENAI_API_KEY }) })
 const app = new Hono()
@@ -37,7 +37,7 @@ app.post('/api/qikbar', (c) => qikbar(c.req.raw))
 
 ```ts
 import express from 'express'
-import { createHandler, toNodeHandler, anthropic } from 'qikbar/server'
+import { createHandler, toNodeHandler, anthropic } from '@qikbar/qikbar/server'
 
 const app = express()
 app.post('/api/qikbar', express.json(), toNodeHandler(createHandler({ provider: anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }) })))

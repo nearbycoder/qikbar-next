@@ -1,4 +1,4 @@
-import { defineExtension, form, list, type Context, type Item, type ListView, type ScopedStorage } from 'qikbar'
+import { defineExtension, form, list, type Context, type Item, type ListView, type ScopedStorage } from '@qikbar/qikbar'
 
 interface Bookmark {
   id: string

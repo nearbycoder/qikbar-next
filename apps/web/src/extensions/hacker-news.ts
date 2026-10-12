@@ -1,4 +1,4 @@
-import { action, defineExtension, list, type Item } from 'qikbar'
+import { action, defineExtension, list, type Item } from '@qikbar/qikbar'
 
 interface Story {
   id: number

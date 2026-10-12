@@ -3,12 +3,12 @@
  * learn the extension API, or copy one as a starting point for your own.
  */
 
-import { action, defineExtension } from '../core/define'
-import { formatHotkey, isMac } from '../core/hotkeys'
-import type { Context, Extension, Item, QikbarInstance } from '../core/types'
-import { convert, evaluate, formatNumber, looksLikeMath } from './math'
+import { action, defineExtension } from '../core/define.js'
+import { formatHotkey, isMac } from '../core/hotkeys.js'
+import type { Context, Extension, Item, QikbarInstance } from '../core/types.js'
+import { convert, evaluate, formatNumber, looksLikeMath } from './math.js'
 
-export { convert, evaluate, formatNumber } from './math'
+export { convert, evaluate, formatNumber } from './math.js'
 
 // ─── Calculator ─────────────────────────────────────────────────────────────
 

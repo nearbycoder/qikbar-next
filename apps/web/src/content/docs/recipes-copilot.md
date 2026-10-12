@@ -11,7 +11,7 @@ This recipe builds a copilot for an invoicing app. Users can say “create an in
 ## 1. The server route
 
 ```ts title="app/api/qikbar/route.ts"
-import { createHandler, anthropic } from 'qikbar/server'
+import { createHandler, anthropic } from '@qikbar/qikbar/server'
 import { auth } from '@/auth'
 
 export const POST = createHandler({
@@ -27,7 +27,7 @@ export const POST = createHandler({
 Tools run in the browser with the user's session, calling your existing API:
 
 ```ts title="command-bar/tools.ts"
-import { defineTool } from 'qikbar'
+import { defineTool } from '@qikbar/qikbar'
 
 export const findInvoices = defineTool<{ status?: 'draft' | 'sent' | 'paid' | 'overdue'; customer?: string }>({
   name: 'find_invoices',

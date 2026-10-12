@@ -5,9 +5,9 @@ group: Reference
 order: 7
 ---
 
-## 1.0.0
+## 0.1.0
 
-The first open-source release. Qikbar is now a free MIT-licensed library instead of a hosted SaaS.
+The first open-source release, published as `@qikbar/qikbar`. Qikbar is now a free MIT-licensed library instead of a hosted SaaS.
 
 **Library**
 
@@ -23,10 +23,10 @@ The first open-source release. Qikbar is now a free MIT-licensed library instead
 
 - Providers: `anthropic`, `openai`, `openaiCompatible`, `ollama`, `gemini`, `browserAI`, `proxy`, `byok`
 - An agent loop where the model can `search`, `run` and `read_page`, plus your own tools
-- `createHandler` and `toNodeHandler` in `qikbar/server`
+- `createHandler` and `toNodeHandler` in `@qikbar/qikbar/server`
 
 **Ecosystem**
 
-- `qikbar/react`: `<Qikbar>`, hooks and `<QikbarTrigger>`
+- `@qikbar/qikbar/react`: `<Qikbar>`, hooks and `<QikbarTrigger>`
 - Built-in extensions: calculator, theme switcher, page tools, AI actions, shortcuts, AI settings
 - Eleven example extensions, a theme builder, a playground, and docs for AI agents (`llms.txt`)

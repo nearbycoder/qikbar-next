@@ -11,9 +11,9 @@ order: 2
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { Qikbar } from 'qikbar/react'
-import { proxy } from 'qikbar'
-import { calculator, themeSwitcher, shortcuts } from 'qikbar/extensions'
+import { Qikbar } from '@qikbar/qikbar/react'
+import { proxy } from '@qikbar/qikbar'
+import { calculator, themeSwitcher, shortcuts } from '@qikbar/qikbar/extensions'
 
 const extensions = [calculator(), themeSwitcher(), shortcuts()]
 
@@ -68,7 +68,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 ## 3. Optional: an AI route
 
 ```ts title="app/api/qikbar/route.ts"
-import { createHandler, anthropic } from 'qikbar/server'
+import { createHandler, anthropic } from '@qikbar/qikbar/server'
 import { auth } from '@/auth'
 
 export const POST = createHandler({
@@ -81,7 +81,7 @@ export const POST = createHandler({
 
 ```tsx
 'use client'
-import { useCommands } from 'qikbar/react'
+import { useCommands } from '@qikbar/qikbar/react'
 
 export function InvoiceActions({ invoice }) {
   useCommands([{ title: `Download invoice ${invoice.number}`, icon: 'download', url: invoice.pdfUrl }], [invoice.id])

@@ -5,11 +5,11 @@
  * Security: providers that take an `apiKey` call the vendor directly from the
  * browser. That's fine for prototypes, internal tools, and "bring your own key"
  * setups where users paste their own key. For production apps with a shared
- * key, use `proxy()` on the client and `createHandler()` from `qikbar/server`.
+ * key, use `proxy()` on the client and `createHandler()` from `@qikbar/qikbar/server`.
  */
 
-import type { AIEvent, AIMessage, AIProvider, AIRequest, AIToolCall, AIToolDefinition, JSONSchema } from '../core/types'
-import { errorFromResponse, parseNDJSON, parseSSE } from './sse'
+import type { AIEvent, AIMessage, AIProvider, AIRequest, AIToolCall, AIToolDefinition, JSONSchema } from '../core/types.js'
+import { errorFromResponse, parseNDJSON, parseSSE } from './sse.js'
 
 let callCounter = 0
 const newCallId = () => `call_${Date.now().toString(36)}${(callCounter++).toString(36)}`
@@ -467,7 +467,7 @@ export const browserAI = /* @__PURE__ */ Object.assign(
 // ─── Proxy (recommended for production) ───────────────────────────────────
 
 export interface ProxyOptions {
-  /** Your endpoint created with `createHandler()` from `qikbar/server`. */
+  /** Your endpoint created with `createHandler()` from `@qikbar/qikbar/server`. */
   url: string
   headers?: Record<string, string> | (() => Record<string, string> | Promise<Record<string, string>>)
   credentials?: RequestCredentials

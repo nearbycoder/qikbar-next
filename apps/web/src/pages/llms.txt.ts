@@ -7,7 +7,7 @@ export const GET: APIRoute = async ({ site }) => {
   const lines = [
     '# Qikbar',
     '',
-    '> Qikbar is a free, open-source (MIT), zero-dependency command bar (⌘K / Ctrl+K) for any web app. It provides fuzzy search, routing, actions, nested views (list, grid, detail, form, AI chat), dynamic data sources, a Raycast-inspired extensions API, theming via CSS variables, and AI (Anthropic, OpenAI, Gemini, Ollama, OpenAI-compatible, proxy, bring-your-own-key) where the model can run app commands as tools. npm package: `qikbar`. Entry points: `qikbar`, `qikbar/react`, `qikbar/server`, `qikbar/extensions`, `qikbar/theme`, `qikbar/utils`.',
+    '> Qikbar is a free, open-source (MIT), zero-dependency command bar (⌘K / Ctrl+K) for any web app. It provides fuzzy search, routing, actions, nested views (list, grid, detail, form, AI chat), dynamic data sources, a Raycast-inspired extensions API, theming via CSS variables, and AI (Anthropic, OpenAI, Gemini, Ollama, OpenAI-compatible, proxy, bring-your-own-key) where the model can run app commands as tools. npm package: `@qikbar/qikbar`. Entry points: `@qikbar/qikbar`, `@qikbar/qikbar/react`, `@qikbar/qikbar/server`, `@qikbar/qikbar/extensions`, `@qikbar/qikbar/theme`, `@qikbar/qikbar/utils`.',
     '',
     'Every page is available as Markdown by appending `.md` to its URL. The full documentation in one file: ' + new URL('/llms-full.txt', base).href,
     '',

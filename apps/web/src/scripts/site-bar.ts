@@ -1,5 +1,5 @@
-import { byok, createQikbar, type Item } from 'qikbar'
-import { calculator, page, shortcuts, themeSwitcher } from 'qikbar/extensions'
+import { byok, createQikbar, type Item } from '@qikbar/qikbar'
+import { calculator, page, shortcuts, themeSwitcher } from '@qikbar/qikbar/extensions'
 import { demoAI } from './demo-ai'
 import { catalog, installedNames, INSTALLED_KEY } from '../data/extensions'
 
@@ -37,7 +37,7 @@ export const bar = createQikbar({
     { title: 'View on GitHub', icon: 'github', url: 'https://github.com/nearbycoder/qikbar-next', section: 'Qikbar', keywords: ['source', 'repo', 'star'] },
     {
       title: 'Copy Install Command',
-      subtitle: 'npm install qikbar',
+      subtitle: 'npm install @qikbar/qikbar',
       icon: 'terminal',
       section: 'Qikbar',
       keywords: ['npm', 'install', 'pnpm', 'bun'],
@@ -46,16 +46,16 @@ export const bar = createQikbar({
           title: 'Copy npm Command',
           icon: 'copy',
           run: async (ctx) => {
-            await ctx.copy('npm install qikbar')
-            ctx.toast({ title: 'Copied npm install qikbar', style: 'success' })
+            await ctx.copy('npm install @qikbar/qikbar')
+            ctx.toast({ title: 'Copied npm install @qikbar/qikbar', style: 'success' })
           },
         },
         {
           title: 'Copy pnpm Command',
           icon: 'copy',
           run: async (ctx) => {
-            await ctx.copy('pnpm add qikbar')
-            ctx.toast({ title: 'Copied pnpm add qikbar', style: 'success' })
+            await ctx.copy('pnpm add @qikbar/qikbar')
+            ctx.toast({ title: 'Copied pnpm add @qikbar/qikbar', style: 'success' })
           },
         },
       ],

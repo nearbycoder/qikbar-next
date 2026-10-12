@@ -4,11 +4,11 @@
   "type": "module",
   "workspaces": ["packages/*", "apps/*", "examples/*"],
   "scripts": {
-    "build": "bun run --filter qikbar build && bun run --filter @qikbar/web build",
-    "build:lib": "bun run --filter qikbar build",
+    "build": "bun run --filter @qikbar/qikbar build && bun run --filter @qikbar/web build",
+    "build:lib": "bun run --filter @qikbar/qikbar build",
     "dev": "bun run --filter @qikbar/web dev",
-    "test": "bun run --filter qikbar test",
-    "typecheck": "bun run --filter qikbar typecheck"
+    "test": "bun run --filter @qikbar/qikbar test",
+    "typecheck": "bun run --filter @qikbar/qikbar typecheck"
   },
   "packageManager": "bun@1.4.2"
 }

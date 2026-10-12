@@ -1,4 +1,4 @@
-import { action, defineExtension, type Item } from 'qikbar'
+import { action, defineExtension, type Item } from '@qikbar/qikbar'
 
 function parse(input: string): [number, number, number] | undefined {
   const s = input.trim().toLowerCase()

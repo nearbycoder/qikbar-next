@@ -1,4 +1,4 @@
-import { action, defineExtension, detail, type DetailView, type Item } from 'qikbar'
+import { action, defineExtension, detail, type DetailView, type Item } from '@qikbar/qikbar'
 
 interface Place {
   name: string

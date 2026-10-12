@@ -1,8 +1,8 @@
 import { StrictMode, useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import { form, list, type Command, type Route } from 'qikbar'
-import { calculator, shortcuts, themeSwitcher } from 'qikbar/extensions'
-import { Qikbar, QikbarTrigger, useCommands } from 'qikbar/react'
+import { form, list, type Command, type Route } from '@qikbar/qikbar'
+import { calculator, shortcuts, themeSwitcher } from '@qikbar/qikbar/extensions'
+import { Qikbar, QikbarTrigger, useCommands } from '@qikbar/qikbar/react'
 import './styles.css'
 
 type Page = 'home' | 'projects' | 'settings'

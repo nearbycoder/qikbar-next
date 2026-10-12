@@ -1,7 +1,7 @@
 ---
 import Base from '../layouts/Base.astro'
 import Icon from '../components/Icon.astro'
-import { presets } from 'qikbar/theme'
+import { presets } from '@qikbar/qikbar/theme'
 
 const colorKeys = [
   ['accent', 'Accent'],
@@ -98,9 +98,9 @@ const fonts = [
 </Base>
 
 <script>
-  import { createQikbar, type ThemeVars, type ThemePresetName } from 'qikbar'
-  import { baseDark, baseLight, resolveThemeVars, themeToCss } from 'qikbar/theme'
-  import { calculator } from 'qikbar/extensions'
+  import { createQikbar, type ThemeVars, type ThemePresetName } from '@qikbar/qikbar'
+  import { baseDark, baseLight, resolveThemeVars, themeToCss } from '@qikbar/qikbar/theme'
+  import { calculator } from '@qikbar/qikbar/extensions'
   import { demoCommands, projectSource } from '../scripts/demo-data'
 
   const state: { preset: ThemePresetName | ''; appearance: 'light' | 'dark'; vars: ThemeVars; tab: 'js' | 'css' } = {

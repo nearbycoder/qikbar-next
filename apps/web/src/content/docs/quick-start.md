@@ -12,7 +12,7 @@ This guide builds a command bar with routes, commands, live search and a form. I
 Call `createQikbar` once, on the client:
 
 ```ts
-import { createQikbar } from 'qikbar'
+import { createQikbar } from '@qikbar/qikbar'
 
 export const bar = createQikbar({
   placeholder: 'Search or jump to…',
@@ -22,7 +22,7 @@ export const bar = createQikbar({
 Press <kbd>⌘</kbd><kbd>K</kbd>. The bar is empty, so let's fill it.
 
 > [!TIP]
-> Using React? Render `<Qikbar />` from `qikbar/react` instead. It takes the same options as props. See [React](/docs/react).
+> Using React? Render `<Qikbar />` from `@qikbar/qikbar/react` instead. It takes the same options as props. See [React](/docs/react).
 
 ## 2. Add routes
 
@@ -83,7 +83,7 @@ sources: [
 Commands can open **views**: lists, grids, Markdown details, forms and AI chats. Here's a form:
 
 ```ts
-import { form } from 'qikbar'
+import { form } from '@qikbar/qikbar'
 
 commands: [
   {
@@ -107,7 +107,7 @@ commands: [
 ## 6. Add extensions
 
 ```ts
-import { calculator, themeSwitcher, shortcuts } from 'qikbar/extensions'
+import { calculator, themeSwitcher, shortcuts } from '@qikbar/qikbar/extensions'
 
 createQikbar({
   // …
@@ -130,7 +130,7 @@ createQikbar({
 ## 8. Optional: AI
 
 ```ts
-import { proxy } from 'qikbar'
+import { proxy } from '@qikbar/qikbar'
 
 createQikbar({ ai: proxy('/api/qikbar') })
 ```

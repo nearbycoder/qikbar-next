@@ -18,7 +18,7 @@ Commands can open **views**. Views stack like pages: <kbd>Esc</kbd> or <kbd>⌫<
 The helpers only add a `type` field. `list({...})` is the same as `{ type: 'list', ... }`.
 
 ```ts
-import { list, grid, detail, form, chat } from 'qikbar'
+import { list, grid, detail, form, chat } from '@qikbar/qikbar'
 ```
 
 ## Opening a view

@@ -26,7 +26,7 @@ Required preferences must be non-empty. If you pass values when installing (`[ex
 ### Styles look wrong
 
 - Another stylesheet may target `.qb-*` classes or global elements with high specificity. Qikbar's reset has zero specificity, so a rule like `div { padding: 8px }` doesn't affect it, but `#app div` would.
-- If your CSP blocks inline styles, pass `nonce`, or import `qikbar/styles.css` with `unstyled: true`.
+- If your CSP blocks inline styles, pass `nonce`, or import `@qikbar/qikbar/styles.css` with `unstyled: true`.
 
 ### The bar is behind my modal or header
 

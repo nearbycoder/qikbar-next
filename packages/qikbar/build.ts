@@ -7,7 +7,7 @@ mkdirSync('dist', { recursive: true })
 
 const common = { bundle: true, target: 'es2020', legalComments: 'none', sourcemap: true } as const
 
-// ESM with shared chunks so `qikbar` and `qikbar/react` share one copy.
+// ESM with shared chunks so `@qikbar/qikbar` and `@qikbar/qikbar/react` share one copy.
 await build({
   ...common,
   entryPoints: {

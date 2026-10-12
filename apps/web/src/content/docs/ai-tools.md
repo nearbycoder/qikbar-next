@@ -8,7 +8,7 @@ order: 4
 Out of the box, the model can `search` and `run` everything in your bar, and `read_page`. Add your own **tools** for operations that don't fit a command, or that need structured arguments.
 
 ```ts
-import { createQikbar, defineTool } from 'qikbar'
+import { createQikbar, defineTool } from '@qikbar/qikbar'
 
 const inviteTeammate = defineTool<{ email: string; role: 'member' | 'admin' }>({
   name: 'invite_teammate',

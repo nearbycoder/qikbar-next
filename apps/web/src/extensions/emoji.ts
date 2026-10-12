@@ -1,4 +1,4 @@
-import { action, defineExtension, grid } from 'qikbar'
+import { action, defineExtension, grid } from '@qikbar/qikbar'
 
 const EMOJI: [string, string][] = [
   ['😀', 'grinning smile happy'], ['😂', 'joy tears laugh'], ['🥹', 'holding back tears'], ['😍', 'heart eyes love'], ['🤔', 'thinking hmm'],

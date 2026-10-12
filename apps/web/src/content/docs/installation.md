@@ -8,33 +8,33 @@ order: 2
 ## Package manager
 
 ```bash
-npm install qikbar
+npm install @qikbar/qikbar
 # or
-pnpm add qikbar
-yarn add qikbar
-bun add qikbar
+pnpm add @qikbar/qikbar
+yarn add @qikbar/qikbar
+bun add @qikbar/qikbar
 ```
 
-Qikbar has **no dependencies**. React is an optional peer dependency, needed only if you import `qikbar/react`.
+Qikbar has **no dependencies**. React is an optional peer dependency, needed only if you import `@qikbar/qikbar/react`.
 
 ## Entry points
 
 | Import | Use it for |
 | --- | --- |
-| `qikbar` | `createQikbar`, view helpers (`list`, `form`, …), AI providers, types |
-| `qikbar/react` | `<Qikbar>`, `useQikbar`, `useCommands`, `useSource`, `useExtension`, `<QikbarTrigger>` |
-| `qikbar/extensions` | Built-in extensions: `calculator`, `themeSwitcher`, `page`, `aiActions`, `shortcuts` |
-| `qikbar/server` | `createHandler` for an AI proxy endpoint, plus server-side providers |
-| `qikbar/theme` | Theme presets, `themeToCss`, the default stylesheet as a string |
-| `qikbar/utils` | The fuzzy matcher, Markdown renderer, icons, hotkey helpers |
-| `qikbar/styles.css` | The default stylesheet as a file (optional; styles are injected automatically) |
+| `@qikbar/qikbar` | `createQikbar`, view helpers (`list`, `form`, …), AI providers, types |
+| `@qikbar/qikbar/react` | `<Qikbar>`, `useQikbar`, `useCommands`, `useSource`, `useExtension`, `<QikbarTrigger>` |
+| `@qikbar/qikbar/extensions` | Built-in extensions: `calculator`, `themeSwitcher`, `page`, `aiActions`, `shortcuts` |
+| `@qikbar/qikbar/server` | `createHandler` for an AI proxy endpoint, plus server-side providers |
+| `@qikbar/qikbar/theme` | Theme presets, `themeToCss`, the default stylesheet as a string |
+| `@qikbar/qikbar/utils` | The fuzzy matcher, Markdown renderer, icons, hotkey helpers |
+| `@qikbar/qikbar/styles.css` | The default stylesheet as a file (optional; styles are injected automatically) |
 
 ## CDN / script tag
 
 You don't need a build step:
 
 ```html
-<script src="https://unpkg.com/qikbar/dist/qikbar.global.js"></script>
+<script src="https://unpkg.com/@qikbar/qikbar/dist/qikbar.global.js"></script>
 <script>
   const bar = Qikbar.createQikbar({ autoIndex: true })
 </script>
@@ -46,7 +46,7 @@ Or use native ES modules:
 
 ```html
 <script type="module">
-  import { createQikbar } from 'https://esm.sh/qikbar'
+  import { createQikbar } from 'https://esm.sh/@qikbar/qikbar'
   createQikbar({ autoIndex: true })
 </script>
 ```
@@ -59,4 +59,4 @@ Or use native ES modules:
 
 ## Styles
 
-By default Qikbar injects one `<style id="qikbar-styles">` tag the first time the bar opens. If your [Content Security Policy](/docs/styling#content-security-policy) blocks inline styles, pass a `nonce`, or set `unstyled: true` and import `qikbar/styles.css` yourself.
+By default Qikbar injects one `<style id="qikbar-styles">` tag the first time the bar opens. If your [Content Security Policy](/docs/styling#content-security-policy) blocks inline styles, pass a `nonce`, or set `unstyled: true` and import `@qikbar/qikbar/styles.css` yourself.

@@ -1,4 +1,4 @@
-import type { ScopedStorage } from './types'
+import type { ScopedStorage } from './types.js'
 
 interface Entry {
   /** Use count. */

@@ -1,7 +1,7 @@
-import { defineExtension } from '../core/define'
-import { defaultStorage } from '../core/storage'
-import type { AIEvent, AIProvider, AIRequest, Extension, StorageAdapter } from '../core/types'
-import { anthropic, gemini, openai } from './providers'
+import { defineExtension } from '../core/define.js'
+import { defaultStorage } from '../core/storage.js'
+import type { AIEvent, AIProvider, AIRequest, Extension, StorageAdapter } from '../core/types.js'
+import { anthropic, gemini, openai } from './providers.js'
 
 export type ByokVendor = 'anthropic' | 'openai' | 'gemini' | 'openai-compatible'
 

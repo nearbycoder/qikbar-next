@@ -1,4 +1,4 @@
-import type { ScopedStorage, StorageAdapter } from './types'
+import type { ScopedStorage, StorageAdapter } from './types.js'
 
 /** In-memory storage, used during SSR or when localStorage is unavailable. */
 export function memoryStorage(): StorageAdapter {

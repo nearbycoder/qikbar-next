@@ -27,7 +27,7 @@ Each docs page also has **Copy as Markdown**, **Open in Claude** and **Open in C
 - Use the app's router for `navigate`. Never hard-code `window.location` if a router exists.
 - Use `sources` for data that lives on the server, with the app's existing fetch layer.
 - Theme with the app's existing CSS variables, for example `vars: { accent: 'var(--primary)' }`.
-- Keep AI keys on the server with `createHandler` from `qikbar/server`.
+- Keep AI keys on the server with `createHandler` from `@qikbar/qikbar/server`.
 
 ## Add Qikbar to your project instructions
 

@@ -7,9 +7,9 @@
  * Use `toNodeHandler()` for Express or `node:http`.
  */
 
-import type { AIEvent, AIMessage, AIProvider, AIToolDefinition } from '../core/types'
+import type { AIEvent, AIMessage, AIProvider, AIToolDefinition } from '../core/types.js'
 
-export { anthropic, gemini, ollama, openai, openaiCompatible } from '../ai/providers'
+export { anthropic, gemini, ollama, openai, openaiCompatible } from '../ai/providers.js'
 
 export interface HandlerOptions {
   provider: AIProvider
@@ -90,8 +90,21 @@ export function createHandler(options: HandlerOptions) {
   }
 }
 
-type NodeReq = import('node:http').IncomingMessage & { body?: unknown }
-type NodeRes = import('node:http').ServerResponse
+/** The subset of Node's IncomingMessage used here (kept structural so consumers don't need @types/node). */
+interface NodeReq extends AsyncIterable<Uint8Array | string> {
+  method?: string
+  url?: string
+  headers: Record<string, string | string[] | undefined>
+  body?: unknown
+}
+
+/** The subset of Node's ServerResponse used here. */
+interface NodeRes {
+  on(event: 'close', listener: () => void): unknown
+  writeHead(status: number, headers: Record<string, string>): unknown
+  write(chunk: Uint8Array): unknown
+  end(): unknown
+}
 
 /** Adapt a Web handler to Node's `(req, res)` signature (Express, Fastify raw, node:http). */
 export function toNodeHandler(handler: (request: Request) => Promise<Response>) {
@@ -101,9 +114,10 @@ export function toNodeHandler(handler: (request: Request) => Promise<Response>) 
     let body: string | undefined
     if (req.body !== undefined) body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body)
     else {
-      const chunks: Buffer[] = []
-      for await (const chunk of req) chunks.push(chunk as Buffer)
-      body = Buffer.concat(chunks).toString('utf8')
+      const decoder = new TextDecoder()
+      let text = ''
+      for await (const chunk of req) text += typeof chunk === 'string' ? chunk : decoder.decode(chunk, { stream: true })
+      body = text + decoder.decode()
     }
     const url = `http://${req.headers.host ?? 'localhost'}${req.url ?? '/'}`
     const response = await handler(

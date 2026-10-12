@@ -1,6 +1,6 @@
-import { formatHotkey } from '../core/hotkeys'
-import type { Accessory, Color, Icon } from '../core/types'
-import { iconSvg } from './icons'
+import { formatHotkey } from '../core/hotkeys.js'
+import type { Accessory, Color, Icon } from '../core/types.js'
+import { iconSvg } from './icons.js'
 
 type Child = Node | string | number | null | undefined | false
 type Props = Record<string, unknown> & { class?: string; style?: string | Record<string, string> }

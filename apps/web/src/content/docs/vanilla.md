@@ -8,7 +8,7 @@ order: 5
 ## No build step
 
 ```html
-<script src="https://unpkg.com/qikbar/dist/qikbar.global.js"></script>
+<script src="https://unpkg.com/@qikbar/qikbar/dist/qikbar.global.js"></script>
 <script>
   const { createQikbar, extensions } = Qikbar
   createQikbar({
@@ -34,7 +34,7 @@ With `autoIndex`, server-rendered apps (Rails, Django, Laravel, Phoenix, WordPre
 ## ES modules
 
 ```ts
-import { createQikbar } from 'qikbar'
+import { createQikbar } from '@qikbar/qikbar'
 
 const bar = createQikbar({ routes, commands })
 document.querySelector('#search')!.addEventListener('click', () => bar.open())
@@ -45,7 +45,7 @@ document.querySelector('#search')!.addEventListener('click', () => bar.open())
 ```ts title="command-bar.service.ts"
 import { Injectable, OnDestroy, inject } from '@angular/core'
 import { Router } from '@angular/router'
-import { createQikbar, type QikbarInstance } from 'qikbar'
+import { createQikbar, type QikbarInstance } from '@qikbar/qikbar'
 
 @Injectable({ providedIn: 'root' })
 export class CommandBarService implements OnDestroy {
@@ -67,7 +67,7 @@ Inject the service once in your root component. For SSR, create the bar only in 
 ```tsx
 import { onCleanup, onMount } from 'solid-js'
 import { useNavigate } from '@solidjs/router'
-import { createQikbar } from 'qikbar'
+import { createQikbar } from '@qikbar/qikbar'
 
 export function CommandBar() {
   const navigate = useNavigate()

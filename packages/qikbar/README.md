@@ -9,14 +9,14 @@
 📖 **Docs:** [qikbar.com/docs](https://qikbar.com/docs) · 🤖 **For AI agents:** [qikbar.com/llms-full.txt](https://qikbar.com/llms-full.txt)
 
 ```bash
-npm install qikbar
+npm install @qikbar/qikbar
 ```
 
 ## Vanilla
 
 ```ts
-import { createQikbar, form } from 'qikbar'
-import { calculator, themeSwitcher } from 'qikbar/extensions'
+import { createQikbar, form } from '@qikbar/qikbar'
+import { calculator, themeSwitcher } from '@qikbar/qikbar/extensions'
 
 const bar = createQikbar({
   navigate: (href) => router.push(href),
@@ -59,7 +59,7 @@ const bar = createQikbar({
 ## React
 
 ```tsx
-import { Qikbar, useCommands } from 'qikbar/react'
+import { Qikbar, useCommands } from '@qikbar/qikbar/react'
 
 <Qikbar routes={routes} commands={commands} navigate={(href) => router.push(href)} />
 
@@ -70,11 +70,11 @@ useCommands([{ title: 'Archive project', icon: 'trash', run: archive }], [archiv
 ## AI
 
 ```ts
-import { createQikbar, proxy } from 'qikbar'
+import { createQikbar, proxy } from '@qikbar/qikbar'
 createQikbar({ routes, commands, ai: proxy('/api/qikbar') })
 
 // app/api/qikbar/route.ts
-import { createHandler, anthropic } from 'qikbar/server'
+import { createHandler, anthropic } from '@qikbar/qikbar/server'
 export const POST = createHandler({ provider: anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }) })
 ```
 
@@ -83,7 +83,7 @@ Press <kbd>Tab</kbd> in the bar to ask AI. The model can search and run your com
 ## Script tag
 
 ```html
-<script src="https://unpkg.com/qikbar/dist/qikbar.global.js"></script>
+<script src="https://unpkg.com/@qikbar/qikbar/dist/qikbar.global.js"></script>
 <script>Qikbar.createQikbar({ autoIndex: true })</script>
 ```
 

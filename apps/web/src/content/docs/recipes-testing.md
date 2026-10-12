@@ -12,7 +12,7 @@ Commands and extensions are plain objects. Call them with a fake context:
 
 ```ts title="commands.test.ts"
 import { describe, expect, it, vi } from 'vitest'
-import type { Context } from 'qikbar'
+import type { Context } from '@qikbar/qikbar'
 import { deployCommand } from './commands'
 
 const fakeCtx = (overrides: Partial<Context> = {}): Context =>
@@ -41,7 +41,7 @@ it('deploys after confirmation', async () => {
 Qikbar runs in happy-dom and jsdom. Open it, type, press keys:
 
 ```ts title="command-bar.test.ts"
-import { createQikbar } from 'qikbar'
+import { createQikbar } from '@qikbar/qikbar'
 
 it('finds and runs a command', async () => {
   const run = vi.fn()

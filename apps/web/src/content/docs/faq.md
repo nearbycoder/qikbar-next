@@ -11,11 +11,11 @@ Yes. Qikbar is MIT licensed with no paid tier, no telemetry and no account. AI f
 
 ### Does it work without React?
 
-Yes. The core has no dependencies and works in any framework or none. `qikbar/react` is an optional thin wrapper.
+Yes. The core has no dependencies and works in any framework or none. `@qikbar/qikbar/react` is an optional thin wrapper.
 
 ### Does it work with SSR?
 
-Yes. `createQikbar` does nothing on the server. `qikbar/react` is marked `"use client"`.
+Yes. `createQikbar` does nothing on the server. `@qikbar/qikbar/react` is marked `"use client"`.
 
 ### How do I open it from a button?
 

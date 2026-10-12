@@ -1,4 +1,4 @@
-import { defineExtension, type Context } from 'qikbar'
+import { defineExtension, type Context } from '@qikbar/qikbar'
 
 const copy = (make: () => string, label: string) => async (ctx: Context) => {
   const value = make()

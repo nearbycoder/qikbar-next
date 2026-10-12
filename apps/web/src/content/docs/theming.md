@@ -120,7 +120,7 @@ bar.configure({ theme: { vars: { accent: userColor } } })
 ## Export a theme
 
 ```ts
-import { resolveThemeVars, themeToCss } from 'qikbar/theme'
+import { resolveThemeVars, themeToCss } from '@qikbar/qikbar/theme'
 
 const { vars } = resolveThemeVars('dracula', 'dark')
 console.log(themeToCss(vars))

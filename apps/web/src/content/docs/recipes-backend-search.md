@@ -11,7 +11,7 @@ A [source](/docs/sources) is just an async function, so any backend works. Each 
 ## REST
 
 ```ts title="sources/projects.ts"
-import type { Source } from 'qikbar'
+import type { Source } from '@qikbar/qikbar'
 
 export const projects: Source = {
   id: 'projects',

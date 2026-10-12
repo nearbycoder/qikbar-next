@@ -1,9 +1,9 @@
-import { createAIClient, runAgent, type RuntimeTool } from '../ai/agent'
-import { action as actionHelpers } from '../core/define'
-import { Frecency } from '../core/frecency'
-import { allowedInInput, isEditable, matchesHotkey, SequenceMatcher } from '../core/hotkeys'
-import { matchItem, rank } from '../core/search'
-import { defaultStorage, scopedStorage } from '../core/storage'
+import { createAIClient, runAgent, type RuntimeTool } from '../ai/agent.js'
+import { action as actionHelpers } from '../core/define.js'
+import { Frecency } from '../core/frecency.js'
+import { allowedInInput, isEditable, matchesHotkey, SequenceMatcher } from '../core/hotkeys.js'
+import { matchItem, rank } from '../core/search.js'
+import { defaultStorage, scopedStorage } from '../core/storage.js'
 import type {
   Action,
   AIClient,
@@ -31,12 +31,12 @@ import type {
   ToastOptions,
   Tool,
   View,
-} from '../core/types'
-import { h, renderIcon, renderKbd, uid } from './dom'
-import { copyText, defaultNavigate } from './nav'
-import { css } from './styles'
-import { resolveThemeVars, cssVarName } from './themes'
-import { ChatRenderer, DetailRenderer, FormRenderer, GridRenderer, ListRenderer, type ViewRenderer } from './views'
+} from '../core/types.js'
+import { h, renderIcon, renderKbd, uid } from './dom.js'
+import { copyText, defaultNavigate } from './nav.js'
+import { css } from './styles.js'
+import { resolveThemeVars, cssVarName } from './themes.js'
+import { ChatRenderer, DetailRenderer, FormRenderer, GridRenderer, ListRenderer, type ViewRenderer } from './views.js'
 
 // ─── Internal types ─────────────────────────────────────────────────────────
 

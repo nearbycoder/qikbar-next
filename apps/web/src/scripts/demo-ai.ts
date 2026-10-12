@@ -1,4 +1,4 @@
-import { byok, type AIEvent, type AIProvider, type AIRequest } from 'qikbar'
+import { byok, type AIEvent, type AIProvider, type AIRequest } from '@qikbar/qikbar'
 
 /**
  * The site's AI: if the visitor saved their own key (AI Settings), use it.

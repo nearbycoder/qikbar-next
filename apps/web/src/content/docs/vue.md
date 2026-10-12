@@ -8,8 +8,8 @@ order: 3
 Qikbar doesn't need a Vue wrapper. Create it once and use it from anywhere.
 
 ```ts title="src/command-bar.ts"
-import { createQikbar } from 'qikbar'
-import { calculator, themeSwitcher } from 'qikbar/extensions'
+import { createQikbar } from '@qikbar/qikbar'
+import { calculator, themeSwitcher } from '@qikbar/qikbar/extensions'
 import router from './router'
 
 export const bar = createQikbar({
@@ -29,7 +29,7 @@ import './command-bar'
 
 ```ts title="src/composables/useCommands.ts"
 import { onMounted, onUnmounted, watch, type Ref } from 'vue'
-import type { Command } from 'qikbar'
+import type { Command } from '@qikbar/qikbar'
 import { bar } from '../command-bar'
 
 export function useCommands(commands: Ref<Command[]> | Command[]) {
@@ -64,7 +64,7 @@ useCommands(computed(() => [{ title: `Archive ${props.project.name}`, icon: 'tra
 Create a client-only plugin:
 
 ```ts title="plugins/qikbar.client.ts"
-import { createQikbar } from 'qikbar'
+import { createQikbar } from '@qikbar/qikbar'
 
 export default defineNuxtPlugin(() => {
   const bar = createQikbar({ navigate: (href) => navigateTo(href), autoIndex: true })
@@ -75,7 +75,7 @@ export default defineNuxtPlugin(() => {
 Add an AI endpoint in `server/api/qikbar.post.ts`:
 
 ```ts
-import { createHandler, anthropic } from 'qikbar/server'
+import { createHandler, anthropic } from '@qikbar/qikbar/server'
 const handler = createHandler({ provider: anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }) })
 export default defineEventHandler((event) => handler(toWebRequest(event)))
 ```

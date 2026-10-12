@@ -1,6 +1,6 @@
 # React example
 
-A Vite + React app using `qikbar/react`.
+A Vite + React app using `@qikbar/qikbar/react`.
 
 ```bash
 # from the repo root

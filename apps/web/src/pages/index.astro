@@ -2,7 +2,7 @@
 import Base from '../layouts/Base.astro'
 import CodeTabs from '../components/CodeTabs.astro'
 import Icon from '../components/Icon.astro'
-import { presets } from 'qikbar/theme'
+import { presets } from '@qikbar/qikbar/theme'
 import prompt from '../../public/prompt.txt?raw'
 
 const usage = [
@@ -10,7 +10,7 @@ const usage = [
     label: 'Vanilla JS',
     lang: 'ts',
     code: `
-import { createQikbar } from 'qikbar'
+import { createQikbar } from '@qikbar/qikbar'
 
 createQikbar({
   routes: [
@@ -33,7 +33,7 @@ createQikbar({
     lang: 'tsx',
     code: `
 'use client'
-import { Qikbar, useCommands } from 'qikbar/react'
+import { Qikbar, useCommands } from '@qikbar/qikbar/react'
 import { useRouter } from 'next/navigation'
 
 export function CommandBar() {
@@ -50,7 +50,7 @@ function ProjectPage({ project }) {
     label: 'Script tag',
     lang: 'html',
     code: `
-<script src="https://unpkg.com/qikbar/dist/qikbar.global.js"></script>
+<script src="https://unpkg.com/@qikbar/qikbar/dist/qikbar.global.js"></script>
 <script>
   // Indexes your nav links and [data-qikbar] elements automatically.
   Qikbar.createQikbar({ autoIndex: true })
@@ -63,13 +63,13 @@ function ProjectPage({ project }) {
     label: 'AI',
     lang: 'ts',
     code: `
-import { createQikbar, proxy } from 'qikbar'
+import { createQikbar, proxy } from '@qikbar/qikbar'
 
 // Browser: talk to your own endpoint (keys stay on the server)
 createQikbar({ routes, commands, ai: proxy('/api/qikbar') })
 
 // Server (Next.js route handler, Hono, Bun, Workers…)
-import { createHandler, anthropic } from 'qikbar/server'
+import { createHandler, anthropic } from '@qikbar/qikbar/server'
 export const POST = createHandler({
   provider: anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }),
 })`,
@@ -77,7 +77,7 @@ export const POST = createHandler({
 ]
 
 const extensionCode = `
-import { defineExtension, list } from 'qikbar'
+import { defineExtension, list } from '@qikbar/qikbar'
 
 export const github = defineExtension({
   name: 'github',
@@ -123,7 +123,7 @@ const features = [
 const presetList = Object.values(presets).filter((p) => !['light', 'dark'].includes(p.name))
 
 const steps = [
-  { n: '1', title: 'Install', body: 'One package, zero dependencies. Or a single script tag.', code: 'npm install qikbar' },
+  { n: '1', title: 'Install', body: 'One package, zero dependencies. Or a single script tag.', code: 'npm install @qikbar/qikbar' },
   { n: '2', title: 'Describe your app', body: 'Routes, commands and data sources are plain objects. Or let autoIndex read your nav.', code: 'createQikbar({ routes, commands })' },
   { n: '3', title: 'Press ⌘K', body: 'Users search, navigate, act and ask AI from anywhere in your app.', code: '// that’s it' },
 ]
@@ -169,10 +169,10 @@ const compare = {
 
 const faqs = [
   ['Is Qikbar really free?', 'Yes. It’s MIT licensed with no paid tier, no telemetry and no account. AI features use your own provider and keys.'],
-  ['Do I need React?', 'No. The core is plain TypeScript with zero dependencies and works anywhere. qikbar/react is an optional thin wrapper.'],
+  ['Do I need React?', 'No. The core is plain TypeScript with zero dependencies and works anywhere. @qikbar/qikbar/react is an optional thin wrapper.'],
   ['How big is it?', 'About 3.5 KB gzipped boots the shell that listens for ⌘K. The full UI (about 35 KB gzipped) loads when the browser is idle.'],
   ['Can the AI do things in my app?', 'Yes. Your commands, routes and sources become tools the model can call. Destructive actions ask the user to confirm first.'],
-  ['Where do API keys live?', 'On your server, with createHandler from qikbar/server and proxy() in the browser. Or let users bring their own key, stored only in their browser.'],
+  ['Where do API keys live?', 'On your server, with createHandler from @qikbar/qikbar/server and proxy() in the browser. Or let users bring their own key, stored only in their browser.'],
   ['Will it match my design?', 'Pick one of 14 presets or map its 30+ CSS variables onto your design tokens. It follows your app’s light and dark mode automatically.'],
 ]
 
@@ -192,7 +192,7 @@ const gallery = catalog.map((c) => ({ title: c.extension.title, icon: c.extensio
       <div class="hero-actions">
         <a class="btn btn-primary" href="/docs/quick-start">Get started <Icon name="arrow-right" size={15} /></a>
         <button class="btn" type="button" data-qikbar-open>Try it <span class="kbd" data-mod-k>⌘K</span></button>
-        <button class="btn btn-ghost install" type="button" data-copy="npm install qikbar"><code>npm i qikbar</code><Icon name="copy" size={14} /></button>
+        <button class="btn btn-ghost install" type="button" data-copy="npm install @qikbar/qikbar"><code>npm i @qikbar/qikbar</code><Icon name="copy" size={14} /></button>
       </div>
     </div>
 
@@ -423,8 +423,8 @@ const gallery = catalog.map((c) => ({ title: c.extension.title, icon: c.extensio
 </Base>
 
 <script>
-  import { createQikbar, type QikbarInstance, type ThemePresetName } from 'qikbar'
-  import { calculator } from 'qikbar/extensions'
+  import { createQikbar, type QikbarInstance, type ThemePresetName } from '@qikbar/qikbar'
+  import { calculator } from '@qikbar/qikbar/extensions'
   import { demoCommands, projectSource } from '../scripts/demo-data'
   import { demoAI } from '../scripts/demo-ai'
   import { catalog } from '../data/extensions'

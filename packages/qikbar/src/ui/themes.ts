@@ -1,4 +1,4 @@
-import type { ThemePresetName, ThemeVars } from '../core/types'
+import type { ThemePresetName, ThemeVars } from '../core/types.js'
 
 export interface ThemePreset {
   name: ThemePresetName

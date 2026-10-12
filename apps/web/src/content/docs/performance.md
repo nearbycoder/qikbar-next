@@ -42,7 +42,7 @@ The script-tag build bundles everything (about 47 KB gzipped).
 ## Measuring
 
 ```ts
-import { rank } from 'qikbar/utils'
+import { rank } from '@qikbar/qikbar/utils'
 
 console.time('rank')
 rank(items, 'set inv')

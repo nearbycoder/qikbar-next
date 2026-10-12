@@ -9,7 +9,7 @@ label: Analytics
 The bar is a direct line into what users want. Three hooks cover most needs.
 
 ```ts title="command-bar/analytics.ts"
-import { createQikbar } from 'qikbar'
+import { createQikbar } from '@qikbar/qikbar'
 
 const bar = createQikbar({
   // …

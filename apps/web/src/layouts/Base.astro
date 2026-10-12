@@ -135,7 +135,7 @@ const active = nav
           <h4>Community</h4>
           <ul>
             <li><a href="https://github.com/nearbycoder/qikbar-next">GitHub</a></li>
-            <li><a href="https://www.npmjs.com/package/qikbar">npm</a></li>
+            <li><a href="https://www.npmjs.com/package/@qikbar/qikbar">npm</a></li>
             <li><a href="https://github.com/nearbycoder/qikbar-next/blob/main/CONTRIBUTING.md">Contributing</a></li>
             <li><a href="https://github.com/nearbycoder/qikbar-next/discussions">Discussions</a></li>
           </ul>
@@ -144,7 +144,7 @@ const active = nav
     </footer>
     <script>
       import '../scripts/site-bar'
-      import { formatHotkey, isMac } from 'qikbar'
+      import { formatHotkey, isMac } from '@qikbar/qikbar'
 
       const label = formatHotkey('mod+k')[0]!.join(isMac ? '' : ' ')
       document.querySelectorAll('[data-mod-k]').forEach((el) => (el.textContent = label))

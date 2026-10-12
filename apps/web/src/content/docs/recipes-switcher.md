@@ -9,7 +9,7 @@ label: Workspace switcher
 A switcher is a [list view](/docs/views#list) whose items run a function. Mark the current item with an accessory, and give the command a shortcut so power users can switch without the mouse.
 
 ```ts title="command-bar/switcher.ts"
-import { list, type Command } from 'qikbar'
+import { list, type Command } from '@qikbar/qikbar'
 
 export function switcher(workspaces: Workspace[], current: Workspace, switchTo: (id: string) => Promise<void>): Command {
   return {

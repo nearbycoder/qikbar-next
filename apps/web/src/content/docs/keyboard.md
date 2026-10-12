@@ -55,7 +55,7 @@ createQikbar({
 ## Display helpers
 
 ```ts
-import { formatHotkey } from 'qikbar'
+import { formatHotkey } from '@qikbar/qikbar'
 formatHotkey('mod+shift+p') // [['⌘', '⇧', 'P']] on Mac, [['Ctrl', 'Shift', 'P']] elsewhere
 ```
 

@@ -9,7 +9,7 @@ label: Overview
 Add one option and your command bar becomes an assistant that can act on the user's behalf:
 
 ```ts
-import { createQikbar, proxy } from 'qikbar'
+import { createQikbar, proxy } from '@qikbar/qikbar'
 
 createQikbar({
   routes,

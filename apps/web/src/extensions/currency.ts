@@ -1,4 +1,4 @@
-import { action, defineExtension, list, type Item } from 'qikbar'
+import { action, defineExtension, list, type Item } from '@qikbar/qikbar'
 
 const API = 'https://api.frankfurter.dev/v1'
 let names: Promise<Record<string, string>> | undefined

@@ -9,8 +9,8 @@ order: 4
 <script lang="ts">
   import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
-  import { createQikbar } from 'qikbar'
-  import { calculator } from 'qikbar/extensions'
+  import { createQikbar } from '@qikbar/qikbar'
+  import { calculator } from '@qikbar/qikbar/extensions'
 
   let { children } = $props()
 
@@ -35,7 +35,7 @@ SvelteKit intercepts anchor clicks, so the [default navigator](/docs/routing#the
 ## Share the instance
 
 ```ts title="src/lib/qikbar.ts"
-import { createQikbar } from 'qikbar'
+import { createQikbar } from '@qikbar/qikbar'
 export const bar = typeof window !== 'undefined' ? createQikbar({ autoIndex: true }) : undefined
 ```
 
@@ -54,7 +54,7 @@ export const bar = typeof window !== 'undefined' ? createQikbar({ autoIndex: tru
 ## AI endpoint
 
 ```ts title="src/routes/api/qikbar/+server.ts"
-import { createHandler, anthropic } from 'qikbar/server'
+import { createHandler, anthropic } from '@qikbar/qikbar/server'
 import { ANTHROPIC_API_KEY } from '$env/static/private'
 
 const handler = createHandler({ provider: anthropic({ apiKey: ANTHROPIC_API_KEY }) })

@@ -1,4 +1,4 @@
-import { action, detail, form, grid, list, type Command, type Item, type Source } from 'qikbar'
+import { action, detail, form, grid, list, type Command, type Item, type Source } from '@qikbar/qikbar'
 
 const statuses = [
   { value: 'In progress', color: 'blue' },

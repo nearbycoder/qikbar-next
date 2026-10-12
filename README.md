@@ -22,11 +22,11 @@
 ---
 
 ```bash
-npm install qikbar
+npm install @qikbar/qikbar
 ```
 
 ```ts
-import { createQikbar } from 'qikbar'
+import { createQikbar } from '@qikbar/qikbar'
 
 createQikbar({
   routes: [
@@ -65,14 +65,14 @@ Paste [this prompt](https://qikbar.com/prompt.txt) into Claude Code, Cursor, Cop
 
 | Import | What |
 | --- | --- |
-| `qikbar` | `createQikbar`, view helpers, AI providers, types |
-| `qikbar/react` | `<Qikbar>`, `useQikbar`, `useCommands`, `useSource`, `useExtension`, `<QikbarTrigger>` |
-| `qikbar/extensions` | `calculator`, `themeSwitcher`, `page`, `aiActions`, `shortcuts` |
-| `qikbar/server` | `createHandler` AI proxy for Next.js, Hono, Express, Bun, Workers… |
-| `qikbar/theme` | Presets and theme helpers |
-| `qikbar/utils` | The fuzzy matcher, Markdown renderer, icons, hotkeys |
+| `@qikbar/qikbar` | `createQikbar`, view helpers, AI providers, types |
+| `@qikbar/qikbar/react` | `<Qikbar>`, `useQikbar`, `useCommands`, `useSource`, `useExtension`, `<QikbarTrigger>` |
+| `@qikbar/qikbar/extensions` | `calculator`, `themeSwitcher`, `page`, `aiActions`, `shortcuts` |
+| `@qikbar/qikbar/server` | `createHandler` AI proxy for Next.js, Hono, Express, Bun, Workers… |
+| `@qikbar/qikbar/theme` | Presets and theme helpers |
+| `@qikbar/qikbar/utils` | The fuzzy matcher, Markdown renderer, icons, hotkeys |
 
-A script-tag build is also available: `<script src="https://unpkg.com/qikbar/dist/qikbar.global.js"></script>`.
+A script-tag build is also available: `<script src="https://unpkg.com/@qikbar/qikbar/dist/qikbar.global.js"></script>`.
 
 ## Repository
 

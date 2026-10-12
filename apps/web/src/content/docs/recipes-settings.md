@@ -9,7 +9,7 @@ label: Settings menus
 Settings are a great fit for the bar: users can change a preference without visiting a settings page. The trick is `ctx.render`, which re-renders the current view after a change so the checkmarks stay accurate.
 
 ```ts title="command-bar/settings.ts"
-import { grid, list, type ListView } from 'qikbar'
+import { grid, list, type ListView } from '@qikbar/qikbar'
 
 function settingsView(): ListView {
   const s = store.settings

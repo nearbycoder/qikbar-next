@@ -1,4 +1,4 @@
-import type { Extension } from 'qikbar'
+import type { Extension } from '@qikbar/qikbar'
 import bookmarks from '../extensions/bookmarks'
 import colors from '../extensions/colors'
 import currency from '../extensions/currency'

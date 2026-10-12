@@ -1,9 +1,9 @@
 'use client'
 
 import { createContext, createElement, useContext, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type DependencyList, type ReactNode } from 'react'
-import { createQikbar } from '../index'
-import { formatHotkey, isMac } from '../core/hotkeys'
-import type { Command, Extension, Navigate, QikbarConfig, QikbarInstance, QikbarState, Source } from '../core/types'
+import { createQikbar } from '../index.js'
+import { formatHotkey, isMac } from '../core/hotkeys.js'
+import type { Command, Extension, Navigate, QikbarConfig, QikbarInstance, QikbarState, Source } from '../core/types.js'
 
 const QikbarContext = createContext<QikbarInstance | null>(null)
 
@@ -195,4 +195,4 @@ export function QikbarTrigger({ children, className, style, label = 'Search…',
   )
 }
 
-export type { QikbarConfig, QikbarInstance, QikbarState } from '../core/types'
+export type { QikbarConfig, QikbarInstance, QikbarState } from '../core/types.js'

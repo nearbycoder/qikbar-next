@@ -6,7 +6,7 @@
  * per field and needs no index build step.
  */
 
-import type { Item } from './types'
+import type { Item } from './types.js'
 
 export interface FuzzyMatch {
   /** 0 (bad) … 1 (exact). */

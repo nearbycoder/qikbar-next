@@ -13,7 +13,7 @@ Qikbar adds a **⌘K command bar** to your web app, like Raycast, Linear or Verc
 - **Ask AI** to do things: “open the Acme project”, “invite Sam to the team”
 
 ```ts
-import { createQikbar } from 'qikbar'
+import { createQikbar } from '@qikbar/qikbar'
 
 createQikbar({
   routes: [
