@@ -61,7 +61,8 @@ interface ListFrame {
   indent: number
 }
 
-export function renderMarkdown(md: string): string {
+export function renderMarkdown(md: string, options: { copyLabel?: string } = {}): string {
+  const copyLabel = escapeHtml(options.copyLabel ?? 'Copy')
   const lines = md.replace(/\r\n?/g, '\n').split('\n')
   const out: string[] = []
   let para: string[] = []
@@ -95,7 +96,7 @@ export function renderMarkdown(md: string): string {
       while (i < lines.length && !lines[i]!.trim().startsWith(marker)) body.push(lines[i++]!)
       i++
       out.push(
-        `<div class="qb-code"><div class="qb-code-head"><span>${escapeHtml(lang)}</span><button type="button" class="qb-code-copy" data-qb-copy>Copy</button></div><pre><code${lang ? ` class="language-${escapeHtml(lang)}"` : ''}>${escapeHtml(body.join('\n'))}</code></pre></div>`,
+        `<div class="qb-code"><div class="qb-code-head"><span>${escapeHtml(lang)}</span><button type="button" class="qb-code-copy" data-qb-copy>${copyLabel}</button></div><pre><code${lang ? ` class="language-${escapeHtml(lang)}"` : ''}>${escapeHtml(body.join('\n'))}</code></pre></div>`,
       )
       continue
     }

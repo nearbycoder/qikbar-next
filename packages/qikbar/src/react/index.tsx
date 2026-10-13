@@ -18,7 +18,7 @@ function setCurrent(bar: QikbarInstance | null) {
 
 const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
-const FUNCTION_KEYS = ['navigate', 'onOpen', 'onClose', 'onRun'] as const
+const FUNCTION_KEYS = ['navigate', 'onOpen', 'onClose', 'onRun', 'onEvent'] as const
 
 export interface QikbarProps extends Omit<QikbarConfig, 'inline'> {
   children?: ReactNode
@@ -50,6 +50,7 @@ export function Qikbar({ children, inline, className, style, onReady, ...config 
     onOpen: () => latest.current.onOpen?.(),
     onClose: () => latest.current.onClose?.(),
     onRun: ((item, action) => latest.current.onRun?.(item, action)) as NonNullable<QikbarConfig['onRun']>,
+    onEvent: ((event) => latest.current.onEvent?.(event)) as NonNullable<QikbarConfig['onEvent']>,
   }).current
 
   const resolve = (c: Partial<QikbarConfig>) => {

@@ -1,45 +1,48 @@
 ---
 title: Svelte & SvelteKit
-description: Create Qikbar in your root layout and navigate with goto.
+description: A store for state, actions for inline bars and page commands. Works with Svelte 4 and 5.
 group: Frameworks
 order: 4
 ---
 
+`@qikbar/qikbar/svelte` needs no compiler plugin: the bar is a store, and inline bars and page commands are actions.
+
 ```svelte title="src/routes/+layout.svelte"
 <script lang="ts">
-  import { onMount } from 'svelte'
-  import { goto } from '$app/navigation'
-  import { createQikbar } from '@qikbar/qikbar'
-  import { calculator } from '@qikbar/qikbar/extensions'
+  import { bar } from '$lib/qikbar'
 
   let { children } = $props()
+</script>
 
-  onMount(() => {
-    const bar = createQikbar({
+<button onclick={() => bar?.open()}>
+  Search {#if $bar?.open}…{/if}
+</button>
+
+{@render children()}
+```
+
+```ts title="src/lib/qikbar.ts"
+import { browser } from '$app/environment'
+import { goto } from '$app/navigation'
+import { qikbarStore } from '@qikbar/qikbar/svelte'
+
+export const bar = browser
+  ? qikbarStore({
       navigate: (href) => goto(href),
       routes: [
         { path: '/', title: 'Home', icon: 'home' },
         { path: '/settings', title: 'Settings', icon: 'settings' },
       ],
-      extensions: [calculator()],
+      launcher: 'touch',
     })
-    return () => bar.destroy()
-  })
-</script>
-
-{@render children()}
+  : undefined
 ```
 
-SvelteKit intercepts anchor clicks, so the [default navigator](/docs/routing#the-default-navigator) already does client-side navigation. `navigate` is optional.
+`$bar` is the bar's state (`{ open, query, depth, loading }`), and every method (`open`, `register`, `destroy`, …) is bound, so `onclick={bar.open}` works.
 
-## Share the instance
+## Page commands
 
-```ts title="src/lib/qikbar.ts"
-import { createQikbar } from '@qikbar/qikbar'
-export const bar = typeof window !== 'undefined' ? createQikbar({ autoIndex: true }) : undefined
-```
-
-## Page-level commands
+`register` returns its cleanup function, so `$effect` handles it:
 
 ```svelte
 <script lang="ts">
@@ -49,7 +52,28 @@ export const bar = typeof window !== 'undefined' ? createQikbar({ autoIndex: tru
 </script>
 ```
 
-`$effect` cleans up automatically because `register` returns the unregister function.
+In Svelte 4, use `onDestroy(bar.register([...]))`, or the `commands` action:
+
+```svelte
+<script>
+  import { commands } from '@qikbar/qikbar/svelte'
+  import { bar } from '$lib/qikbar'
+</script>
+
+<section use:commands={{ bar, commands: [{ title: 'Export report', run: exportReport }] }}>…</section>
+```
+
+## Inline
+
+```svelte
+<script>
+  import { qikbar } from '@qikbar/qikbar/svelte'
+</script>
+
+<div use:qikbar={{ commands, placeholder: 'Search docs…' }}></div>
+```
+
+The action applies config changes and destroys the bar when the element goes away.
 
 ## AI endpoint
 

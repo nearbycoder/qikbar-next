@@ -54,15 +54,21 @@ Press <kbd>⌘K</kbd>.
 
 ## Features
 
-- **Instant fuzzy search**: word-boundary and acronym aware, frecency-ranked, highlighted. About 3 ms for 10,000 items.
+- **Instant fuzzy search**: word-boundary and acronym aware, frecency-ranked, highlighted. About 3 ms for 10,000 items. Optional semantic search finds commands by meaning.
 - **Routing**: works with Next.js, React Router, Vue, SvelteKit, Astro, or plain links. `autoIndex` can turn your nav into commands with no config.
-- **Views**: push lists, grids, Markdown details (streamable), forms and AI chats, with breadcrumbs and back.
-- **Actions**: primary and secondary actions, a Raycast-style action panel (<kbd>⌘.</kbd>), shortcuts, inline arguments, confirmations and toasts.
+- **Views**: push lists, grids, Markdown details (streamable), forms and AI chats, with breadcrumbs and back. Multi-select with bulk actions.
+- **Actions**: primary and secondary actions, a Raycast-style action panel (<kbd>⌘.</kbd>), shortcuts, inline arguments, confirmations, and toasts with Undo (<kbd>⌘Z</kbd>).
+- **Personal**: users pin favorite commands and give them aliases.
 - **Live sources**: search your API as the user types, with debouncing and cancellation.
 - **AI that acts**: <kbd>Tab</kbd> to ask. The model can run your commands, search your sources and read the page. Works with Claude, GPT, Gemini, Ollama, any OpenAI-compatible API, Chrome's on-device model, a server proxy, or the user's own key. No SDKs.
-- **Extensions**: package commands, sources, AI tools and preferences into a portable bundle, inspired by Raycast. Six are built in, and [eleven examples](apps/web/src/extensions) cover weather, currency, npm, Wikipedia, bookmarks, GitHub and more.
+- **MCP & WebMCP**: give the AI the tools of any MCP server, and expose your commands to AI agents in the browser with `webmcp: true`.
+- **Extensions**: package commands, sources, AI tools and preferences into a portable bundle, inspired by Raycast. Six are built in, and [eleven more](apps/web/src/extensions) install with `npx @qikbar/qikbar add weather`.
+- **Mobile**: a touch layout with long-press actions, a launcher button, and sizing that stays above the on-screen keyboard.
+- **Translated**: every string is a label, with 10 bundled languages.
 - **Theming**: 14 presets, 30+ CSS variables, automatic light and dark, Tailwind-friendly slot classes, or unstyled.
 - **Tiny and fast**: zero dependencies, about 3.5 KB to boot, the UI loads when the browser is idle, and virtualized lists handle 100k rows.
+- **Any framework**: React, Vue, Svelte, Solid, a `<qik-bar>` web component (Angular, HTMX, plain HTML), or vanilla JS.
+- **Analytics-ready**: `onEvent` reports searches, empty searches, runs and more, for PostHog, Plausible or anything else.
 - **Accessible**: ARIA combobox and listbox, focus management, reduced motion.
 
 ## Set it up with one prompt
@@ -75,8 +81,14 @@ Paste [this prompt](https://qikbar.com/prompt.txt) into Claude Code, Cursor, Cop
 | --- | --- |
 | `@qikbar/qikbar` | `createQikbar`, view helpers, AI providers, types |
 | `@qikbar/qikbar/react` | `<Qikbar>`, `useQikbar`, `useCommands`, `useSource`, `useExtension`, `<QikbarTrigger>` |
+| `@qikbar/qikbar/vue` | `<Qikbar>`, `useQikbar`, `useCommands`, `useSource`, `useExtension` |
+| `@qikbar/qikbar/svelte` | `qikbarStore`, `use:qikbar`, `use:commands` |
+| `@qikbar/qikbar/solid` | `<QikbarProvider>`, `useQikbar`, `useCommands`, … |
+| `@qikbar/qikbar/element` | The `<qik-bar>` web component |
+| `@qikbar/qikbar/ai` | AI providers, `mcp()`, embeddings |
+| `@qikbar/qikbar/locales` | Translations: `es`, `fr`, `de`, `pt`, `it`, `nl`, `ja`, `zh`, `ko` |
 | `@qikbar/qikbar/extensions` | `calculator`, `themeSwitcher`, `page`, `aiActions`, `shortcuts` |
-| `@qikbar/qikbar/server` | `createHandler` AI proxy for Next.js, Hono, Express, Bun, Workers… |
+| `@qikbar/qikbar/server` | `createHandler` AI proxy and `createEmbeddingsHandler`, for Next.js, Hono, Express, Bun, Workers… |
 | `@qikbar/qikbar/theme` | Presets and theme helpers |
 | `@qikbar/qikbar/utils` | The fuzzy matcher, Markdown renderer, icons, hotkeys |
 

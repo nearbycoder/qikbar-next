@@ -23,7 +23,7 @@ qikbar-extension-linear/
   "type": "module",
   "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
   "keywords": ["qikbar-extension", "qikbar", "linear"],
-  "peerDependencies": { "@qikbar/qikbar": "^0.1.0" }
+  "peerDependencies": { "@qikbar/qikbar": ">=0.2.0" }
 }
 ```
 

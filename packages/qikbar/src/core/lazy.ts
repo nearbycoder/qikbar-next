@@ -6,9 +6,12 @@
 
 import type { Bar } from '../ui/bar.js'
 import { allowedInInput, isEditable, matchesHotkey } from './hotkeys.js'
-import type { AIClient, Extension, Item, QikbarConfig, QikbarEvents, QikbarInstance, Source, ToastHandle, ToastOptions, View } from './types.js'
+import { defaultStorage, scopedStorage } from './storage.js'
+import type { AIClient, Extension, Item, QikbarConfig, QikbarEvents, QikbarInstance, ScopedStorage, Source, ToastHandle, ToastOptions, View } from './types.js'
 
 type Loader = () => Promise<{ Bar: typeof Bar }>
+
+const hasModelContext = () => !!((document as any).modelContext ?? (navigator as any).modelContext)
 
 export class LazyQikbar implements QikbarInstance {
   private bar?: Bar
@@ -17,6 +20,8 @@ export class LazyQikbar implements QikbarInstance {
   private config: QikbarConfig
   private teardown: (() => void)[] = []
   private destroyed = false
+  private removeLauncher?: () => void
+  private store?: ScopedStorage
 
   constructor(
     config: QikbarConfig,
@@ -28,6 +33,9 @@ export class LazyQikbar implements QikbarInstance {
       void this.load()
       return
     }
+    this.updateLauncher()
+    // Agents may call tools at any time, so WebMCP needs the UI loaded now (only if the browser supports it).
+    if (config.webmcp && hasModelContext()) void this.load()
     const onKey = (e: KeyboardEvent) => {
       const hotkeys = this.config.hotkey === false ? [] : ([] as string[]).concat(this.config.hotkey ?? 'mod+k')
       const inField = isEditable(e.target)
@@ -54,6 +62,37 @@ export class LazyQikbar implements QikbarInstance {
     const idle = (globalThis as any).requestIdleCallback as ((cb: () => void, o?: { timeout: number }) => number) | undefined
     if (idle) idle(() => void this.load(), { timeout: 2500 })
     else setTimeout(() => void this.load(), 1200)
+  }
+
+  private launcherToken = 0
+
+  /** The launcher is loaded on demand, so apps without one don't ship it. */
+  private updateLauncher() {
+    this.removeLauncher?.()
+    this.removeLauncher = undefined
+    const token = ++this.launcherToken
+    if (!this.config.launcher || this.config.inline || this.destroyed) return
+    void import('./launcher.js').then(({ mountLauncher, resolveLauncher }) => {
+      const opts = resolveLauncher(this.config.launcher)
+      if (!opts || token !== this.launcherToken || this.destroyed) return
+      const label = this.config.labels?.openCommandBar ?? 'Open command bar'
+      const mount = () => {
+        if (this.destroyed || token !== this.launcherToken) return
+        this.removeLauncher = mountLauncher(opts, label, () => this.open(), this.config.nonce)
+      }
+      if (document.body) mount()
+      else document.addEventListener('DOMContentLoaded', mount, { once: true })
+    })
+  }
+
+  /** Resolves once the launcher (if any) is on the page. Mostly for tests. */
+  launcherReady(): Promise<void> {
+    return import('./launcher.js').then(() => new Promise((r) => setTimeout(r)))
+  }
+
+  private storage(): ScopedStorage {
+    this.store ??= scopedStorage(this.config.storage ?? defaultStorage(), this.config.namespace ?? 'qikbar')
+    return this.store
   }
 
   /** Load the UI now. Resolves when ready. */
@@ -131,8 +170,10 @@ export class LazyQikbar implements QikbarInstance {
     return this.disposable((b) => b.use(extension, preferences))
   }
   configure(config: Partial<QikbarConfig>) {
+    this.config = { ...this.config, ...config }
     if (this.bar) this.bar.configure(config)
-    else this.config = { ...this.config, ...config }
+    if ('launcher' in config || 'labels' in config) this.updateLauncher()
+    if (config.webmcp && !this.bar && hasModelContext()) void this.load()
   }
   push(view: View) {
     this.run((b) => b.push(view))
@@ -162,11 +203,26 @@ export class LazyQikbar implements QikbarInstance {
   commands(): Item[] {
     return this.bar?.commands() ?? []
   }
+  pins(): string[] {
+    return this.bar?.pins() ?? this.storage().get<string[]>('pins') ?? []
+  }
+  pin(id: string, pinned?: boolean) {
+    this.run((b) => b.pin(id, pinned))
+  }
+  aliases(): Record<string, string> {
+    return this.bar?.aliases() ?? this.storage().get<Record<string, string>>('aliases') ?? {}
+  }
+  setAlias(id: string, alias: string | null) {
+    this.run((b) => b.setAlias(id, alias))
+  }
   on<K extends keyof QikbarEvents>(event: K, handler: (payload: QikbarEvents[K]) => void) {
     return this.disposable((b) => b.on(event, handler))
   }
   destroy() {
     this.destroyed = true
+    this.launcherToken++
+    this.removeLauncher?.()
+    this.removeLauncher = undefined
     for (const fn of this.teardown) fn()
     this.teardown = []
     this.queue = []

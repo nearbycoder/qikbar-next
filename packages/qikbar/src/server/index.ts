@@ -10,6 +10,7 @@
 import type { AIEvent, AIMessage, AIProvider, AIToolDefinition } from '../core/types.js'
 
 export { anthropic, gemini, ollama, openai, openaiCompatible } from '../ai/providers.js'
+export { geminiEmbeddings, ollamaEmbeddings, openaiEmbeddings } from '../ai/embeddings.js'
 
 export interface HandlerOptions {
   provider: AIProvider
@@ -87,6 +88,53 @@ export function createHandler(options: HandlerOptions) {
     return new Response(stream, {
       headers: { 'content-type': 'application/x-ndjson; charset=utf-8', 'cache-control': 'no-store', 'x-accel-buffering': 'no', ...headers },
     })
+  }
+}
+
+export interface EmbeddingsHandlerOptions {
+  /** Turn texts into vectors, e.g. `openaiEmbeddings({ apiKey: process.env.OPENAI_API_KEY })`. */
+  embed: (texts: string[], options: { signal: AbortSignal }) => Promise<number[][]>
+  /** Return false (or a Response) to reject a request. */
+  authorize?: (request: Request) => boolean | Response | Promise<boolean | Response>
+  /** Max texts per request. Default 256. */
+  maxTexts?: number
+  /** Max total characters per request. Default 100 000. */
+  maxChars?: number
+  headers?: Record<string, string>
+}
+
+/**
+ * A `(request) => Response` endpoint for `proxyEmbeddings()`, so semantic search
+ * works without exposing an API key. Accepts `{ texts: string[] }`, returns `{ embeddings }`.
+ */
+export function createEmbeddingsHandler(options: EmbeddingsHandlerOptions) {
+  const maxTexts = options.maxTexts ?? 256
+  const maxChars = options.maxChars ?? 100_000
+  return async function handler(request: Request): Promise<Response> {
+    const headers = options.headers ?? {}
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers })
+    if (request.method !== 'POST') return json(405, 'Method not allowed', headers)
+    if (options.authorize) {
+      const ok = await options.authorize(request)
+      if (ok instanceof Response) return ok
+      if (!ok) return json(401, 'Unauthorized', headers)
+    }
+    let body: { texts?: unknown }
+    try {
+      body = (await request.json()) as { texts?: unknown }
+    } catch {
+      return json(400, 'Invalid JSON', headers)
+    }
+    const texts = body.texts
+    if (!Array.isArray(texts) || !texts.length || texts.some((t) => typeof t !== 'string')) return json(400, 'Expected { texts: string[] }', headers)
+    if (texts.length > maxTexts) return json(413, 'Too many texts', headers)
+    if ((texts as string[]).reduce((n, t) => n + t.length, 0) > maxChars) return json(413, 'Request too large', headers)
+    try {
+      const embeddings = await options.embed(texts as string[], { signal: request.signal ?? new AbortController().signal })
+      return new Response(JSON.stringify({ embeddings }), { headers: { 'content-type': 'application/json', 'cache-control': 'no-store', ...headers } })
+    } catch (err) {
+      return json(502, err instanceof Error ? err.message : 'Embedding failed', headers)
+    }
   }
 }
 

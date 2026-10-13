@@ -1,0 +1,40 @@
+name: Propose an extension
+description: Suggest an extension for the Qikbar registry (installable with `npx @qikbar/qikbar add`).
+title: 'Extension: '
+labels: ['extension']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for building on Qikbar! Registry extensions are single files that import only from `@qikbar/qikbar`, so `npx @qikbar/qikbar add <name>` can copy them into any project. See [Registry & CLI](https://qikbar.com/docs/extension-registry).
+  - type: input
+    id: name
+    attributes:
+      label: Name
+      description: kebab-case, unique (e.g. `linear-issues`)
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What does it do?
+      description: The commands, sources and AI tools it adds, and a query that shows it off.
+    validations:
+      required: true
+  - type: input
+    id: services
+    attributes:
+      label: External services
+      description: APIs it calls, and whether it needs a key (use preferences for keys).
+  - type: input
+    id: link
+    attributes:
+      label: Source
+      description: A link to the code, a gist, or "PR coming".
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Checklist
+      options:
+        - label: It's one file using `defineExtension()` and only imports `@qikbar/qikbar`.
+        - label: It doesn't send data anywhere the user wouldn't expect.

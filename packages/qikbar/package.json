@@ -1,6 +1,6 @@
 {
   "name": "@qikbar/qikbar",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "The open-source command bar for any web app. Raycast-style search, routing, actions, extensions and AI in one tiny, themeable package.",
   "keywords": [
     "command-bar",
@@ -11,7 +11,13 @@
     "spotlight",
     "search",
     "ai",
+    "mcp",
+    "webmcp",
     "react",
+    "vue",
+    "svelte",
+    "solid",
+    "web-component",
     "vanilla"
   ],
   "license": "MIT",
@@ -25,13 +31,17 @@
   "bugs": "https://github.com/nearbycoder/qikbar-next/issues",
   "type": "module",
   "sideEffects": [
-    "*.css"
+    "*.css",
+    "./dist/element.js"
   ],
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "unpkg": "./dist/qikbar.global.js",
   "jsdelivr": "./dist/qikbar.global.js",
+  "bin": {
+    "qikbar": "./bin/qikbar.mjs"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -61,12 +71,33 @@
       "types": "./dist/utils.d.ts",
       "default": "./dist/utils.js"
     },
+    "./locales": {
+      "types": "./dist/locales/index.d.ts",
+      "default": "./dist/locales.js"
+    },
+    "./element": {
+      "types": "./dist/element/index.d.ts",
+      "default": "./dist/element.js"
+    },
+    "./vue": {
+      "types": "./dist/vue/index.d.ts",
+      "default": "./dist/vue.js"
+    },
+    "./svelte": {
+      "types": "./dist/svelte/index.d.ts",
+      "default": "./dist/svelte.js"
+    },
+    "./solid": {
+      "types": "./dist/solid/index.d.ts",
+      "default": "./dist/solid.js"
+    },
     "./styles.css": "./dist/styles.css",
     "./global": "./dist/qikbar.global.js",
     "./package.json": "./package.json"
   },
   "files": [
     "dist",
+    "bin",
     "README.md",
     "LICENSE"
   ],
@@ -78,10 +109,18 @@
     "prepublishOnly": "bun run build && bun run test"
   },
   "peerDependencies": {
-    "react": ">=18"
+    "react": ">=18",
+    "vue": ">=3.3",
+    "solid-js": ">=1.8"
   },
   "peerDependenciesMeta": {
     "react": {
+      "optional": true
+    },
+    "vue": {
+      "optional": true
+    },
+    "solid-js": {
       "optional": true
     }
   },
@@ -93,8 +132,10 @@
     "happy-dom": "^21.0.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "solid-js": "^1.9",
     "typescript": "^5.9.3",
-    "vitest": "^5.0.4"
+    "vitest": "^5.0.4",
+    "vue": "^3.5"
   },
   "publishConfig": {
     "access": "public"

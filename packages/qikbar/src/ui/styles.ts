@@ -209,6 +209,33 @@ textarea.qb-field-input{height:auto;min-height:96px;padding:8px 10px;resize:vert
 
 .qb-hud{position:fixed;left:50%;bottom:32px;translate:-50% 0;z-index:calc(var(--qb-z) + 2);display:flex;align-items:center;gap:8px;max-width:calc(100vw - 32px);padding:9px 16px 9px 12px;border:1px solid var(--qb-border);border-radius:999px;background:var(--qb-bg-elevated);color:var(--qb-fg);box-shadow:0 12px 32px -8px rgba(0,0,0,.3);font-size:13px;animation:qb-hud .22s var(--qb-ease);pointer-events:none}
 .qb-hud .qb-toast-msg{color:var(--qb-fg-muted)}
+.qb-hud[data-action]{pointer-events:auto;padding-right:6px}
+.qb-toast-action{display:inline-flex;align-items:center;gap:6px;height:24px;margin-left:4px;padding:0 6px 0 9px;border-radius:7px;background:var(--qb-kbd-bg);color:var(--qb-fg);font-size:12.5px;font-weight:500;white-space:nowrap;flex-shrink:0}
+.qb-toast-action:hover{background:var(--qb-hover)}
+.qb-toast-action .qb-kbd{height:18px;min-width:18px;font-size:10.5px}
+.qb-hud .qb-toast-action{border-radius:999px;height:28px;padding:0 8px 0 12px}
+
+.qb-alias{display:inline-flex;align-items:center;height:20px;padding:0 7px;border-radius:6px;border:1px solid var(--qb-border);color:var(--qb-fg-muted);font:500 11.5px/1 var(--qb-font-mono,ui-monospace,monospace);flex-shrink:0}
+.qb-pin{display:inline-flex;color:var(--qb-fg-subtle);flex-shrink:0}
+.qb-item[aria-selected=true] .qb-pin{color:inherit;opacity:.7}
+.qb-check{display:inline-grid;place-items:center;width:16px;height:16px;flex-shrink:0;border-radius:5px;border:1.5px solid var(--qb-fg-subtle);color:transparent;transition:background .1s,border-color .1s}
+.qb-check .qb-icon svg{stroke-width:3}
+[data-marked] .qb-check{background:var(--qb-accent);border-color:var(--qb-accent);color:var(--qb-accent-fg)}
+.qb-item[data-marked]{background:color-mix(in srgb,var(--qb-accent) 10%,transparent)}
+.qb-item[data-marked][aria-selected=true]{background:color-mix(in srgb,var(--qb-accent) 18%,var(--qb-selection))}
+.qb-cell .qb-check{position:absolute;top:8px;left:8px;z-index:1;background:var(--qb-bg)}
+.qb-cell[data-marked] .qb-check{background:var(--qb-accent)}
+.qb-cell[data-marked]{outline:2px solid var(--qb-accent);outline-offset:-2px}
+
+/* Touch: no keyboard hints, bigger targets, 16px inputs (prevents iOS zoom) */
+.qb-root[data-qb-touch] .qb-item .qb-kbds,.qb-root[data-qb-touch] .qb-footer .qb-kbds,.qb-root[data-qb-touch] .qb-hint .qb-kbds,.qb-root[data-qb-touch] .qb-action .qb-kbds,.qb-root[data-qb-touch] .qb-toast-action .qb-kbd,.qb-root[data-qb-touch] .qb-btn .qb-kbds{display:none}
+.qb-root[data-qb-touch] .qb-item{height:max(var(--qb-row-height),48px)}
+.qb-root[data-qb-touch] .qb-action{min-height:44px}
+.qb-root[data-qb-touch] .qb-footer-btn{height:34px;padding:0 10px}
+.qb-root[data-qb-touch] .qb-input,.qb-root[data-qb-touch] .qb-actions-input,.qb-root[data-qb-touch] .qb-field-input,.qb-root[data-qb-touch] .qb-arg{font-size:max(16px,var(--qb-input-font-size))}
+.qb-root[data-qb-touch] .qb-actions-input,.qb-root[data-qb-touch] .qb-field-input,.qb-root[data-qb-touch] .qb-arg{font-size:16px}
+.qb-root[data-qb-touch] .qb-scroll{-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+.qb-root[data-qb-touch] .qb-item,.qb-root[data-qb-touch] .qb-cell{-webkit-touch-callout:none}
 
 @keyframes qb-fade{from{opacity:0}}
 @keyframes qb-fade-out{to{opacity:0}}
@@ -222,10 +249,13 @@ textarea.qb-field-input{height:auto;min-height:96px;padding:8px 10px;resize:vert
 .qb-root[data-qb-inline] .qb-dialog{animation:none}
 
 @media (max-width:640px){
-.qb-dialog{top:8px;width:calc(100vw - 16px)}
-.qb-body{height:min(var(--qb-list-height),58vh)}
-.qb-footer-left,.qb-hint{display:none}
+.qb-dialog{top:max(8px,env(safe-area-inset-top,0px));width:calc(100vw - 16px)}
+.qb-body{height:min(var(--qb-list-height),calc(var(--qb-vvh,100dvh) - 140px - env(safe-area-inset-top,0px)))}
+.qb-root[data-qb-inline] .qb-body{height:var(--qb-list-height)}
+.qb-footer-left>:not(.qb-toast),.qb-hint{display:none}
 .qb-footer{justify-content:flex-end}
+.qb-footer-left:has(.qb-toast){flex:1}
+.qb-hud{bottom:calc(24px + env(safe-area-inset-bottom,0px))}
 .qb-form{grid-template-columns:1fr}
 .qb-form-label{text-align:left;padding:0}
 .qb-meta,.qb-split .qb-detail{display:none}

@@ -6,6 +6,10 @@
  * reason about.
  */
 
+import type { Labels } from './labels.js'
+
+export type { Labels } from './labels.js'
+
 export type Awaitable<T> = T | Promise<T>
 
 /**
@@ -75,14 +79,29 @@ export interface Context {
   confirm(options: ConfirmOptions | string): Promise<boolean>
   /** Set the search text. */
   setQuery(query: string): void
+  /** Items the user marked in a `multiSelect` list (empty otherwise). */
+  readonly selection: Item[]
+  /** The bar's labels (after `labels` overrides), for translated messages. */
+  readonly labels: Labels
 }
 
 export interface ToastOptions {
   title: string
   message?: string
   style?: 'success' | 'failure' | 'loading' | 'info'
-  /** Milliseconds before the toast hides. `0` keeps it. Default 2500 (loading toasts persist). */
+  /** Milliseconds before the toast hides. `0` keeps it. Default 2600, or 6000 with an action (loading toasts persist). */
   duration?: number
+  /** A button in the toast, e.g. "View" or "Retry". */
+  action?: ToastAction
+  /** Shorthand for an "Undo" action bound to ⌘Z / Ctrl+Z while the toast is visible. */
+  undo?: () => Awaitable<void>
+}
+
+export interface ToastAction {
+  title: string
+  /** Shortcut that triggers the action while the toast is visible, e.g. `"mod+z"`. */
+  shortcut?: string
+  run(): Awaitable<void>
 }
 
 export interface ToastHandle {
@@ -113,6 +132,13 @@ export interface Action {
    */
   run(ctx: Context): Awaitable<RunResult>
   keepOpen?: boolean
+  /**
+   * Run the action on several items at once. When the user has marked items in a
+   * `multiSelect` list, only actions with `runMany` are offered.
+   */
+  runMany?(items: Item[], ctx: Context): Awaitable<RunResult>
+  /** @internal Label used for the title of built-in actions, so `labels` can translate it. */
+  labelKey?: keyof Labels
 }
 
 /** A row in a list or grid, or a command at the root. */
@@ -212,6 +238,11 @@ export interface ListView extends BaseView {
   emptyView?: EmptyView
   /** Initial search text. */
   query?: string
+  /**
+   * Let the user mark several items (Shift/⌘-click, Shift+↑↓, or "Select" in the
+   * action panel) and run an action with `runMany` on all of them.
+   */
+  multiSelect?: boolean
 }
 
 export interface GridView extends Omit<ListView, 'type' | 'detail'> {
@@ -579,10 +610,84 @@ export interface QikbarConfig {
   /** Footer hint shown at the left when idle. */
   footer?: string
 
+  /** Translate or reword the UI. See `@qikbar/qikbar/locales` for ready-made translations. */
+  labels?: Partial<Labels>
+
+  /** Let users pin commands to the top and give them aliases. Default true. */
+  personalize?: boolean
+  /** Search by meaning as well as by spelling, with embeddings you provide. */
+  semantic?: SemanticOptions
+
+  /** Touch-friendly layout: hides keyboard hints and enables long-press. Default `"auto"` (detects touch screens). */
+  touch?: boolean | 'auto'
+  /** A floating button that opens the bar, for touch devices and mouse users. */
+  launcher?: boolean | 'touch' | LauncherOptions
+
+  /** Expose your commands to AI agents in the browser through WebMCP (`document.modelContext`). */
+  webmcp?: boolean | WebMCPOptions
+
   onOpen?: () => void
   onClose?: () => void
   /** Called whenever an item or action runs. Useful for analytics. */
   onRun?: (item: Item, action: Action) => void
+  /** Usage events (open, search, run, no results, …) for analytics. */
+  onEvent?: (event: QikbarEvent) => void
+}
+
+export interface SemanticOptions {
+  /** Turn texts into embedding vectors. Use `openaiEmbeddings()`, `ollamaEmbeddings()` or your own. */
+  embed(texts: string[], options: { signal: AbortSignal }): Promise<number[][]>
+  /** Minimum cosine similarity for a result (0–1). Default 0.35. */
+  threshold?: number
+  /** Maximum "Related" results. Default 5. */
+  limit?: number
+  /** Minimum query length. Default 3. */
+  minQueryLength?: number
+  /** Debounce in ms. Default 250. */
+  debounce?: number
+  /** Also embed results from sources. Default false (only commands, routes and extension commands). */
+  sources?: boolean
+}
+
+export interface LauncherOptions {
+  /** Default `"bottom-right"`. */
+  position?: 'bottom-right' | 'bottom-left'
+  /** Accessible label. Default `labels.openCommandBar`. */
+  label?: string
+  /** Only show on touch devices. Default false. */
+  touchOnly?: boolean
+  /** Icon name or SVG. Default `"search"`. */
+  icon?: string
+  /** Distance from the edges in px. Default 20. */
+  offset?: number
+}
+
+export interface WebMCPOptions {
+  /** Prefix for tool names. Default `"qikbar"`. */
+  prefix?: string
+  /** Also expose `ai.tools` and extension tools. Default true. */
+  tools?: boolean
+  /** Let agents run commands (otherwise only search/list). Default true. */
+  run?: boolean
+}
+
+/** A usage event, for analytics. Item details are limited to id, title and section. */
+export type QikbarEvent =
+  | { type: 'open' }
+  | { type: 'close' }
+  | { type: 'search'; query: string; results: number; view: string }
+  | { type: 'no_results'; query: string; view: string }
+  | { type: 'run'; item: EventItem; action: string; via: 'keyboard' | 'click' | 'shortcut' | 'panel' | 'ai' | 'agent'; count?: number }
+  | { type: 'ask_ai'; prompt: string }
+  | { type: 'pin' | 'unpin'; item: EventItem }
+  | { type: 'alias'; item: EventItem; alias: string | null }
+  | { type: 'undo'; title: string }
+  | { type: 'error'; message: string }
+
+export interface EventItem {
+  id: string
+  title: string
+  section?: string
 }
 
 export interface AutoIndexOptions {
@@ -608,6 +713,8 @@ export interface AIOptions {
   maxSteps?: number
   /** Example prompts shown in an empty chat. */
   suggestions?: string[]
+  /** Remote tools from MCP servers, e.g. `[mcp({ url: '/api/mcp' })]`. */
+  mcp?: ToolProvider[]
   /** Let the AI read the current page's text when asked about it. Default true. */
   pageContext?: boolean
 }
@@ -626,6 +733,14 @@ export interface QikbarEvents {
   close: void
   change: QikbarState
   run: { item: Item; action: Action }
+  event: QikbarEvent
+}
+
+/** Something that supplies AI tools asynchronously, like an MCP server. */
+export interface ToolProvider {
+  readonly name: string
+  /** Load (or reload) the tools. Called before each chat turn; cache inside. */
+  tools(signal?: AbortSignal): Promise<Tool[]>
 }
 
 export interface QikbarInstance {
@@ -654,5 +769,13 @@ export interface QikbarInstance {
   on<K extends keyof QikbarEvents>(event: K, handler: (payload: QikbarEvents[K]) => void): () => void
   /** Load the UI ahead of time (it otherwise loads when the browser is idle). */
   preload(): Promise<void>
+  /** Pinned item ids, most recent first. */
+  pins(): string[]
+  /** Pin or unpin an item by id. */
+  pin(id: string, pinned?: boolean): void
+  /** Aliases, as `{ alias: itemId }`. */
+  aliases(): Record<string, string>
+  /** Set (or with `null`, remove) the alias for an item. */
+  setAlias(id: string, alias: string | null): void
   destroy(): void
 }

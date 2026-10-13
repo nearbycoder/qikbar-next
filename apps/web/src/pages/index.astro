@@ -111,15 +111,18 @@ export const github = defineExtension({
 })`
 
 const features = [
-  { icon: 'search', title: 'Instant fuzzy search', body: 'A tuned matcher ranks word starts, acronyms and camelCase. Frequently used items rise to the top. Matches are highlighted as you type.' },
+  { icon: 'search', title: 'Instant fuzzy search', body: 'A tuned matcher ranks word starts, acronyms and camelCase, and favorites rise to the top. Add embeddings and it finds commands by meaning, too.' },
   { icon: 'arrow-up-right', title: 'Routing built in', body: 'Pass your routes and your router’s navigate function. Works with Next.js, React Router, Vue, SvelteKit, Astro, or plain links.' },
-  { icon: 'layers', title: 'Views, not just lists', body: 'Push lists, grids, Markdown details, forms and chats. Raycast-style navigation with breadcrumbs, back and an action panel.' },
+  { icon: 'layers', title: 'Views, not just lists', body: 'Push lists, grids, Markdown details, forms and chats, with breadcrumbs, an action panel and multi-select for bulk actions.' },
   { icon: 'zap', title: 'Live data sources', body: 'Search your API as the user types, with debouncing and cancellation built in. Results merge into ranked sections.' },
   { icon: 'sparkles', title: 'AI that takes action', body: '“Take me to billing for Acme.” The model sees your commands as tools and runs them. Works with Claude, GPT, Gemini, local models, or your own key.' },
-  { icon: 'puzzle', title: 'Extensions API', body: 'Package commands, sources, AI tools and preferences into an extension. Inspired by Raycast and framework-agnostic.' },
-  { icon: 'palette', title: 'Themeable to the pixel', body: '14 presets, 30+ CSS variables, light and dark, slot class names for Tailwind, or unstyled. It looks like part of your app.' },
+  { icon: 'bot', title: 'MCP & WebMCP', body: 'Give the AI the tools of any MCP server, and expose your commands to browser agents with one option. Your app becomes agent-ready.' },
+  { icon: 'puzzle', title: 'Extensions & registry', body: 'Package commands, sources, AI tools and preferences into an extension, then add any of them with npx @qikbar/qikbar add.' },
+  { icon: 'monitor', title: 'Built for touch', body: 'On phones it hides key hints, grows tap targets, opens actions on long-press and stays above the keyboard. A launcher button replaces ⌘K.' },
+  { icon: 'star', title: 'Pins, aliases & undo', body: 'Users pin favorites, give commands short aliases and undo mistakes with ⌘Z. It learns how each person works.' },
+  { icon: 'palette', title: 'Themeable & translated', body: '14 presets, 30+ CSS variables, Tailwind slots or unstyled, and every string in 10 languages. It looks and reads like your app.' },
   { icon: 'keyboard', title: 'Keyboard first', body: 'Global shortcuts and sequences ("g s"), action shortcuts, inline arguments, Tab to AI and Esc to go back. Accessible combobox markup.' },
-  { icon: 'package', title: 'Zero dependencies', body: 'About 3.5 KB to boot. The UI loads when the browser is idle. Virtualized lists handle 100,000 rows. No framework lock-in.' },
+  { icon: 'package', title: 'Zero dependencies', body: 'About 3.5 KB to boot. The UI loads when the browser is idle. Virtualized lists handle 100,000 rows. React, Vue, Svelte, Solid or a web component.' },
 ]
 
 const presetList = Object.values(presets).filter((p) => !['light', 'dark'].includes(p.name))
@@ -239,7 +242,7 @@ const gallery = catalog.map((c) => ({ title: c.extension.title, icon: c.extensio
 
   <section class="frameworks container" aria-label="Works with">
     <span>Works with</span>
-    {['React', 'Next.js', 'Vue', 'Svelte', 'Astro', 'Angular', 'Solid', 'Remix', 'HTMX', 'Plain HTML'].map((f) => <span class="fw">{f}</span>)}
+    {['React', 'Next.js', 'Vue', 'Svelte', 'Solid', 'Angular', 'Astro', 'Remix', 'HTMX', 'Web components'].map((f) => <span class="fw">{f}</span>)}
   </section>
 
   <section class="film-section container" aria-label="Product film">

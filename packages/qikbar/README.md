@@ -67,6 +67,35 @@ import { Qikbar, useCommands } from '@qikbar/qikbar/react'
 useCommands([{ title: 'Archive project', icon: 'trash', run: archive }], [archive])
 ```
 
+## Vue, Svelte, Solid and web components
+
+```ts
+import { Qikbar, useCommands } from '@qikbar/qikbar/vue' // <Qikbar :config="…" />
+import { qikbarStore } from '@qikbar/qikbar/svelte' // $bar is the state
+import { QikbarProvider, useCommands } from '@qikbar/qikbar/solid'
+import '@qikbar/qikbar/element' // <qik-bar><qik-command href="/settings">Settings</qik-command></qik-bar>
+```
+
+## Mobile, personalization and more
+
+```ts
+createQikbar({
+  launcher: 'touch', // a floating search button on phones
+  labels: de, // from '@qikbar/qikbar/locales'
+  semantic: { embed: proxyEmbeddings({ url: '/api/embed' }) }, // search by meaning
+  webmcp: true, // let browser AI agents use your commands
+  onEvent: (e) => posthog.capture(`command_bar_${e.type}`, e), // analytics
+})
+```
+
+Users can pin commands (⌘⇧P) and give them aliases, lists can be `multiSelect` with bulk `runMany` actions, and `ctx.toast({ title, undo })` adds Undo with ⌘Z.
+
+## Extensions from the registry
+
+```bash
+npx @qikbar/qikbar add weather currency
+```
+
 ## AI
 
 ```ts
@@ -78,7 +107,7 @@ import { createHandler, anthropic } from '@qikbar/qikbar/server'
 export const POST = createHandler({ provider: anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }) })
 ```
 
-Press <kbd>Tab</kbd> in the bar to ask AI. The model can search and run your commands. Providers: `anthropic`, `openai`, `gemini`, `openaiCompatible`, `ollama`, `browserAI`, `proxy`, `byok`.
+Press <kbd>Tab</kbd> in the bar to ask AI. The model can search and run your commands. Providers: `anthropic`, `openai`, `gemini`, `openaiCompatible`, `ollama`, `browserAI`, `proxy`, `byok`. Add MCP servers' tools with `ai: { provider, mcp: [mcp({ url: '/api/mcp' })] }`.
 
 ## Script tag
 

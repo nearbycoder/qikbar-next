@@ -2,7 +2,7 @@
 title: Vanilla, Angular & more
 description: Use Qikbar with no framework, a script tag, Angular, Solid, htmx, Rails, Django or Laravel.
 group: Frameworks
-order: 5
+order: 8
 ---
 
 ## No build step

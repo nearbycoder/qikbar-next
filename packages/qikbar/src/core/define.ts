@@ -51,12 +51,14 @@ export const action = {
   copy(content: string | (() => string), options: Partial<Action> = {}): Action {
     return {
       title: 'Copy to Clipboard',
+      labelKey: 'copyToClipboard',
       icon: 'copy',
       shortcut: 'mod+c',
       ...options,
       async run(ctx: Context) {
         const ok = await ctx.copy(typeof content === 'function' ? content() : content)
-        ctx.toast({ title: ok ? 'Copied to clipboard' : 'Copy failed', style: ok ? 'success' : 'failure' })
+        const l = ctx.labels
+        ctx.toast({ title: ok ? (l?.copied ?? 'Copied to clipboard') : (l?.copyFailed ?? 'Copy failed'), style: ok ? 'success' : 'failure' })
       },
     }
   },
@@ -64,6 +66,7 @@ export const action = {
   open(url: string, options: Partial<Action> = {}): Action {
     return {
       title: 'Open in Browser',
+      labelKey: 'openInBrowser',
       icon: 'external',
       ...options,
       run: (ctx) => ctx.openUrl(url),
@@ -73,6 +76,7 @@ export const action = {
   navigate(href: string, options: Partial<Action> = {}): Action {
     return {
       title: 'Open',
+      labelKey: 'open',
       icon: 'arrow-right',
       ...options,
       run: (ctx) => ctx.navigate(href),
@@ -82,6 +86,7 @@ export const action = {
   navigateNewTab(href: string, options: Partial<Action> = {}): Action {
     return {
       title: 'Open in New Tab',
+      labelKey: 'openInNewTab',
       icon: 'external',
       shortcut: 'mod+enter',
       ...options,
