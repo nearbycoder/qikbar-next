@@ -30,7 +30,7 @@ const bar = createQikbar({ /* config */ })
 | `placeholder` | `string` | `'Search for commands, pages and more…'` | Root input placeholder |
 | `recents` | `boolean \| number` | `4` | How many recent items to show with an empty query |
 | `autoIndex` | `boolean \| AutoIndexOptions` | `false` | Indexes page links and `[data-qikbar]` elements |
-| `ai` | `AIProvider \| AIOptions` | — | See [AI](/docs/ai) |
+| `ai` | `AIProvider \| AIOptions` | — | See [AI](/docs/ai). `ai.mcp` adds [MCP servers](/docs/mcp). |
 | `tools` | `Tool[]` | `[]` | [AI tools](/docs/ai-tools) |
 | `theme` | `ThemePresetName \| ThemeConfig` | — | See [Theming](/docs/theming) |
 | `appearance` | `'auto' \| 'light' \| 'dark' \| () => …` | `'auto'` | Light or dark mode |
@@ -45,7 +45,14 @@ const bar = createQikbar({ /* config */ })
 | `footer` | `string` | — | Footer text when idle |
 | `branding` | `boolean` | `false` | Shows a small “qikbar” link in the footer |
 | `onOpen` / `onClose` | `() => void` | — | Lifecycle callbacks |
-| `onRun` | `(item, action) => void` | — | Called for every run, for example for analytics |
+| `labels` | `Partial<Labels>` | English | Translate or reword the UI. See [Translations](/docs/i18n). |
+| `personalize` | `boolean` | `true` | [Pins & aliases](/docs/pins-and-aliases) |
+| `semantic` | `SemanticOptions` | — | [Semantic search](/docs/semantic-search) with your embeddings |
+| `touch` | `boolean \| 'auto'` | `'auto'` | Touch layout. See [Mobile & touch](/docs/mobile). |
+| `launcher` | `boolean \| 'touch' \| LauncherOptions` | `false` | A floating button that opens the bar |
+| `webmcp` | `boolean \| WebMCPOptions` | `false` | Expose commands to browser agents. See [WebMCP](/docs/webmcp). |
+| `onRun` | `(item, action) => void` | — | Called for every run |
+| `onEvent` | `(event: QikbarEvent) => void` | — | [Usage events](/docs/recipes-analytics) for analytics |
 
 ## Instance
 
@@ -65,7 +72,9 @@ const bar = createQikbar({ /* config */ })
 | `toast(options)` | Show a toast, or a HUD when closed |
 | `commands()` | All root items currently registered |
 | `ai` | The AI client (`ask`, `stream`), if configured |
-| `on(event, handler)` | Subscribe to `open`, `close`, `change` or `run`. Returns an unsubscribe function. |
+| `pins()` / `pin(id, pinned?)` | Read or change [pinned](/docs/pins-and-aliases) items |
+| `aliases()` / `setAlias(id, alias \| null)` | Read or change aliases |
+| `on(event, handler)` | Subscribe to `open`, `close`, `change`, `run` or `event`. Returns an unsubscribe function. |
 | `preload()` | Load the UI chunk now instead of waiting for idle time |
 | `destroy()` | Remove listeners and DOM |
 
@@ -75,13 +84,38 @@ const bar = createQikbar({ /* config */ })
 bar.on('open', () => analytics.track('command_bar_opened'))
 bar.on('run', ({ item, action }) => analytics.track('command_run', { id: item.id, action: action.title }))
 bar.on('change', ({ open, query, depth, loading }) => {})
+bar.on('event', (e) => analytics.track(`qikbar_${e.type}`, e)) // open, search, no_results, run, ask_ai, pin, undo, …
 ```
 
 ## Exports
 
 ### `@qikbar/qikbar`
 
-`createQikbar`, `list`, `grid`, `detail`, `form`, `chat`, `action`, `defineExtension`, `defineCommands`, `defineSource`, `defineTool`, `anthropic`, `openai`, `openaiCompatible`, `ollama`, `gemini`, `browserAI`, `proxy`, `byok`, `formatHotkey`, `parseHotkey`, `matchesHotkey`, `isMac`, `memoryStorage`, `version`, and all types.
+`createQikbar`, `list`, `grid`, `detail`, `form`, `chat`, `action`, `defineExtension`, `defineCommands`, `defineSource`, `defineTool`, `anthropic`, `openai`, `openaiCompatible`, `ollama`, `gemini`, `browserAI`, `proxy`, `byok`, `mcp`, `openaiEmbeddings`, `geminiEmbeddings`, `ollamaEmbeddings`, `proxyEmbeddings`, `cachedEmbeddings`, `defaultLabels`, `formatLabel`, `formatHotkey`, `parseHotkey`, `matchesHotkey`, `isMac`, `memoryStorage`, `version`, and all types.
+
+### `@qikbar/qikbar/ai`
+
+The AI providers, plus `mcp`, `MCPClient`, `MCPError`, the embedding helpers, `createAIClient`, `runAgent`, `parseSSE` and `parseNDJSON`.
+
+### `@qikbar/qikbar/locales`
+
+`en`, `es`, `fr`, `de`, `pt`, `it`, `nl`, `ja`, `zh`, `ko`, `locales` and `localeFor(tag)`. See [Translations](/docs/i18n).
+
+### `@qikbar/qikbar/element`
+
+Registers `<qik-bar>` on import. Exports `QikbarElement` and `defineQikbarElement(tag)`. See [Web component](/docs/web-component).
+
+### `@qikbar/qikbar/vue`
+
+`Qikbar`, `useQikbar`, `useCommands`, `useSource`, `useExtension`, `useQikbarInstance`, `QikbarKey`. See [Vue](/docs/vue).
+
+### `@qikbar/qikbar/svelte`
+
+`qikbarStore`, and the `qikbar` and `commands` actions. See [Svelte](/docs/svelte).
+
+### `@qikbar/qikbar/solid`
+
+`QikbarProvider`, `createQikbar`, `useQikbar`, `useCommands`, `useSource`, `useExtension`, `inlineQikbar`. See [SolidJS](/docs/solid).
 
 ### `@qikbar/qikbar/react`
 
@@ -89,7 +123,7 @@ bar.on('change', ({ open, query, depth, loading }) => {})
 
 ### `@qikbar/qikbar/server`
 
-`createHandler`, `toNodeHandler`, `anthropic`, `openai`, `openaiCompatible`, `ollama`, `gemini`.
+`createHandler`, `createEmbeddingsHandler`, `toNodeHandler`, `anthropic`, `openai`, `openaiCompatible`, `ollama`, `gemini`, `openaiEmbeddings`, `geminiEmbeddings`, `ollamaEmbeddings`.
 
 ### `@qikbar/qikbar/extensions`
 
@@ -105,4 +139,8 @@ bar.on('change', ({ open, query, depth, loading }) => {})
 
 ## Types
 
-All types are exported from `@qikbar/qikbar`: `QikbarConfig`, `QikbarInstance`, `Command`, `Item`, `Action`, `Accessory`, `Icon`, `View`, `ListView`, `GridView`, `DetailView`, `FormView`, `FormField`, `ChatView`, `Source`, `Extension`, `ExtensionCommand`, `Preference`, `Argument`, `Tool`, `Context`, `AIProvider`, `AIEvent`, `AIMessage`, `ThemeVars`, `ThemeConfig` and more.
+All types are exported from `@qikbar/qikbar`: `QikbarConfig`, `QikbarInstance`, `Command`, `Item`, `Action`, `Accessory`, `Icon`, `View`, `ListView`, `GridView`, `DetailView`, `FormView`, `FormField`, `ChatView`, `Source`, `Extension`, `ExtensionCommand`, `Preference`, `Argument`, `Tool`, `ToolProvider`, `Context`, `AIProvider`, `AIEvent`, `AIMessage`, `ThemeVars`, `ThemeConfig`, `Labels`, `QikbarEvent`, `SemanticOptions`, `LauncherOptions`, `WebMCPOptions`, `ToastAction` and more.
+
+## CLI
+
+`npx @qikbar/qikbar add <name...>`, `list` and `info`. See [Registry & CLI](/docs/extension-registry).

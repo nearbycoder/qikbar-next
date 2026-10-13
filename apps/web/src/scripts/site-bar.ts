@@ -20,6 +20,9 @@ const go = (href: string) => {
 
 export const bar = createQikbar({
   placeholder: 'Search docs, run commands, or ask AI…',
+  // A search button on phones, and the docs as tools for browser AI agents.
+  launcher: 'touch',
+  webmcp: true,
   navigate: (href, { newTab }) => (newTab ? window.open(href, '_blank') : go(href)),
   ai: {
     provider: demoAI,

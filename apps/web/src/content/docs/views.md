@@ -94,6 +94,9 @@ With `detail: true`, the selected item's `detail` field is rendered as Markdown 
 { title: 'README.md', detail: async () => await fetchReadme() }
 ```
 
+> [!TIP]
+> Add `multiSelect: true` to a list or grid to let users mark several items and run one action on all of them. See [Multi-select](/docs/multi-select).
+
 ## Grid
 
 ```ts

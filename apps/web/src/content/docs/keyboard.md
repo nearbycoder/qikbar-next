@@ -17,9 +17,14 @@ order: 8
 | <kbd>⌘</kbd><kbd>↵</kbd> | Run the secondary action |
 | <kbd>⌘</kbd><kbd>.</kbd> | Open the action panel (`actionsHotkey`) |
 | <kbd>Tab</kbd> | Ask AI, or fill in a command's arguments |
-| <kbd>Esc</kbd> | Close the panel, stop the AI, go back, clear the search, then close the bar |
+| <kbd>Esc</kbd> | Close the panel, stop the AI, clear marked items, go back, clear the search, then close the bar |
 | <kbd>⌫</kbd> on an empty input | Go back |
 | <kbd>←</kbd> <kbd>→</kbd> | Move within a grid |
+| <kbd>⌘</kbd><kbd>⇧</kbd><kbd>P</kbd> | Pin or unpin the selected command ([pins](/docs/pins-and-aliases)) |
+| <kbd>⌘</kbd><kbd>Z</kbd> | Undo, while an [undo toast](/docs/toasts) is showing and you're not editing text |
+| <kbd>⇧</kbd><kbd>↑</kbd> / <kbd>⇧</kbd><kbd>↓</kbd> | Mark items in a [multi-select](/docs/multi-select) list |
+| <kbd>⌘</kbd><kbd>⇧</kbd><kbd>X</kbd> / <kbd>⌘</kbd><kbd>⇧</kbd><kbd>A</kbd> | Mark the selected item / mark all |
+| Right-click, or long-press on touch | Open the action panel for that row |
 
 ## Shortcut syntax
 

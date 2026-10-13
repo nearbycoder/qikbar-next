@@ -1,67 +1,80 @@
 ---
 title: Vue & Nuxt
-description: Use Qikbar's vanilla API from Vue 3 or Nuxt, with Vue Router navigation and composables.
+description: The official Vue 3 bindings, a Qikbar component and composables, with Vue Router and Nuxt.
 group: Frameworks
 order: 3
 ---
 
-Qikbar doesn't need a Vue wrapper. Create it once and use it from anywhere.
+`@qikbar/qikbar/vue` has a `<Qikbar>` component and composables that clean up after themselves.
 
-```ts title="src/command-bar.ts"
-import { createQikbar } from '@qikbar/qikbar'
-import { calculator, themeSwitcher } from '@qikbar/qikbar/extensions'
-import router from './router'
+```vue title="src/App.vue"
+<script setup lang="ts">
+import { Qikbar } from '@qikbar/qikbar/vue'
+import { calculator } from '@qikbar/qikbar/extensions'
+import { useRouter } from 'vue-router'
 
-export const bar = createQikbar({
-  navigate: (href) => router.push(href),
+const router = useRouter()
+const config = {
+  navigate: (href: string) => router.push(href),
   routes: router.getRoutes()
     .filter((r) => r.meta?.title)
-    .map((r) => ({ path: r.path, title: String(r.meta.title), icon: (r.meta.icon as string) ?? 'file' })),
-  extensions: [calculator(), themeSwitcher()],
-})
-```
-
-```ts title="src/main.ts"
-import './command-bar'
-```
-
-## A composable for contextual commands
-
-```ts title="src/composables/useCommands.ts"
-import { onMounted, onUnmounted, watch, type Ref } from 'vue'
-import type { Command } from '@qikbar/qikbar'
-import { bar } from '../command-bar'
-
-export function useCommands(commands: Ref<Command[]> | Command[]) {
-  let off: (() => void) | undefined
-  const register = (cmds: Command[]) => {
-    off?.()
-    off = bar.register(cmds)
-  }
-  if (Array.isArray(commands)) onMounted(() => register(commands))
-  else watch(commands, register, { immediate: true })
-  onUnmounted(() => off?.())
+    .map((r) => ({ path: r.path, title: String(r.meta.title) })),
+  extensions: [calculator()],
+  launcher: 'touch' as const,
 }
+</script>
+
+<template>
+  <Qikbar :config="config">
+    <RouterView />
+  </Qikbar>
+</template>
 ```
+
+`config` takes everything `createQikbar()` does. Changes to it are applied to the running bar (no remount).
+
+## Contextual commands
+
+`useCommands` registers commands while a component is mounted. Pass a getter to re-register when reactive state changes:
 
 ```vue
 <script setup lang="ts">
-import { computed } from 'vue'
-import { useCommands } from '@/composables/useCommands'
+import { useCommands } from '@qikbar/qikbar/vue'
+
 const props = defineProps<{ project: { id: string; name: string } }>()
-useCommands(computed(() => [{ title: `Archive ${props.project.name}`, icon: 'trash', run: () => archive(props.project.id) }]))
+
+useCommands(() => [
+  { title: `Archive ${props.project.name}`, icon: 'trash', run: () => archive(props.project.id) },
+])
 </script>
 ```
 
-## Trigger button
+`useSource(source)` and `useExtension(ext, prefs)` work the same way.
+
+## Control and state
 
 ```vue
-<button data-qikbar-open>Search… <kbd>⌘K</kbd></button>
+<script setup lang="ts">
+import { useQikbar } from '@qikbar/qikbar/vue'
+const { open, state } = useQikbar()
+</script>
+
+<template>
+  <button @click="open()">Search {{ state.open ? '(open)' : '' }}</button>
+</template>
+```
+
+Or skip the script entirely: `<button data-qikbar-open>Search</button>`.
+
+## Inline
+
+```vue
+<Qikbar inline :config="{ commands, placeholder: 'Search docs…' }" />
 ```
 
 ## Nuxt
 
-Create a client-only plugin:
+Use the component in `app.vue` (it only creates the bar on the client), or make a client plugin:
 
 ```ts title="plugins/qikbar.client.ts"
 import { createQikbar } from '@qikbar/qikbar'
@@ -72,7 +85,7 @@ export default defineNuxtPlugin(() => {
 })
 ```
 
-Add an AI endpoint in `server/api/qikbar.post.ts`:
+AI endpoint in `server/api/qikbar.post.ts`:
 
 ```ts
 import { createHandler, anthropic } from '@qikbar/qikbar/server'

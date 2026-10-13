@@ -28,6 +28,7 @@ const repo = 'https://github.com/nearbycoder/qikbar-next/blob/main/apps/web/src/
     <div class="actions">
       <a class="btn btn-primary" href="/docs/extensions">Build an extension <Icon name="arrow-right" size={15} /></a>
       <a class="btn" href="/docs/publishing-extensions">Publish yours</a>
+      <a class="btn btn-ghost cli-pill" href="/docs/extension-registry" title="Add extensions with the CLI"><Icon name="terminal" size={14} /><code>npx @qikbar/qikbar add weather</code></a>
     </div>
   </section>
 
@@ -106,10 +107,11 @@ const repo = 'https://github.com/nearbycoder/qikbar-next/blob/main/apps/web/src/
     <div class="submit card">
       <div>
         <h2 style="margin:0">Built something useful?</h2>
-        <p>Publish it to npm with the <code>qikbar-extension</code> keyword and open a pull request to list it here.</p>
+        <p>Add it to the registry with a pull request, and anyone can install it with <code>npx @qikbar/qikbar add</code>. Or publish it to npm with the <code>qikbar-extension</code> keyword.</p>
       </div>
       <div class="actions" style="margin:0">
-        <a class="btn btn-primary" href="/docs/publishing-extensions">Publishing guide</a>
+        <a class="btn btn-primary" href="/docs/extension-registry">Submit to the registry</a>
+        <a class="btn" href="/docs/publishing-extensions">Publishing guide</a>
         <a class="btn" href="/docs/example-extensions">Walk through the examples</a>
       </div>
     </div>
@@ -120,6 +122,7 @@ const repo = 'https://github.com/nearbycoder/qikbar-next/blob/main/apps/web/src/
       <Icon name="file-text" size={15} />
       <strong id="source-title" data-source-title></strong>
       <div class="sd-tools">
+        <button type="button" class="sd-btn sd-cli" data-source-cli title="Copy the CLI command"><Icon name="terminal" size={13} /> <code data-source-cli-text></code></button>
         <button type="button" class="sd-btn" data-source-copy><Icon name="copy" size={13} /> Copy</button>
         <a class="sd-btn" data-source-link href="#" target="_blank" rel="noopener"><Icon name="github" size={13} /> GitHub</a>
         <button type="button" class="sd-btn icon" data-source-close aria-label="Close" autofocus><Icon name="x" size={15} /></button>
@@ -200,6 +203,7 @@ const repo = 'https://github.com/nearbycoder/qikbar-next/blob/main/apps/web/src/
     b.addEventListener('click', () => {
       current = files.find((f) => f.dataset.file === b.dataset.source)
       files.forEach((f) => (f.hidden = f !== current))
+      dialog.querySelector('[data-source-cli-text]')!.textContent = `npx @qikbar/qikbar add ${b.dataset.source!.replace(/\.ts$/, '')}`
       dialog.querySelector('[data-source-title]')!.textContent = b.dataset.source!
       dialog.querySelector<HTMLAnchorElement>('[data-source-link]')!.href = current?.dataset.href ?? '#'
       dialog.showModal()
@@ -209,6 +213,11 @@ const repo = 'https://github.com/nearbycoder/qikbar-next/blob/main/apps/web/src/
   dialog.querySelector('[data-source-close]')!.addEventListener('click', () => dialog.close())
   dialog.addEventListener('click', (e) => {
     if (e.target === dialog) dialog.close()
+  })
+  dialog.querySelector('[data-source-cli]')!.addEventListener('click', async () => {
+    const cmd = dialog.querySelector('[data-source-cli-text]')!.textContent ?? ''
+    await navigator.clipboard.writeText(cmd)
+    window.qikbar.toast({ title: 'Command copied', message: cmd, style: 'success' })
   })
   dialog.querySelector('[data-source-copy]')!.addEventListener('click', async () => {
     await navigator.clipboard.writeText(current?.querySelector('pre')?.innerText ?? '')
@@ -288,6 +297,9 @@ const repo = 'https://github.com/nearbycoder/qikbar-next/blob/main/apps/web/src/
   .sd-tools { margin-left: auto; display: flex; gap: 6px; }
   .sd-btn { display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg-soft); color: var(--muted); font: 500 12.5px var(--font); text-decoration: none; cursor: pointer; }
   .sd-btn:hover { color: var(--text); }
+  .sd-cli code { font-size: 12px; color: var(--text); }
+  .cli-pill code { font-size: 13px; color: var(--muted); }
+  @media (max-width: 720px) { .sd-cli { display: none; } }
   .sd-btn.icon { padding: 0 7px; }
   .sd-body { overflow: auto; }
   .sd-body :global(.astro-code) { margin: 0; border: 0; border-radius: 0; font-size: 12.5px; padding: 18px 20px; }

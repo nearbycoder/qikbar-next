@@ -52,7 +52,7 @@ bun run typecheck
 
 ## Adding an extension to the gallery
 
-Add a file to `apps/web/src/extensions/` and an entry to `apps/web/src/data/extensions.ts`. Published npm extensions are welcome too. See [Publishing extensions](https://qikbar.com/docs/publishing-extensions).
+Add a file to `apps/web/src/extensions/` and an entry to `apps/web/src/data/extensions.ts`. Everything in the gallery is also served from the registry (`/registry/index.json`), so once it's merged anyone can install it with `npx @qikbar/qikbar add <name>`. Keep it to one file that only imports `@qikbar/qikbar`. Not sure yet? [Propose it first](https://github.com/nearbycoder/qikbar-next/issues/new?template=extension.yml). Published npm extensions are welcome too: see [Registry & CLI](https://qikbar.com/docs/extension-registry) and [Publishing extensions](https://qikbar.com/docs/publishing-extensions).
 
 ## Adding a theme preset
 

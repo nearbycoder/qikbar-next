@@ -12,6 +12,8 @@ const TYPES: Record<string, string> = {
   '.md': 'text/markdown; charset=utf-8',
   '.txt': 'text/plain; charset=utf-8',
   '.json': 'application/json; charset=utf-8',
+  // Registry sources (Bun would otherwise guess video/mp2t).
+  '.ts': 'text/plain; charset=utf-8',
 }
 
 async function find(pathname: string) {
@@ -43,6 +45,8 @@ Bun.serve({
     if (TYPES[ext]) headers['content-type'] = TYPES[ext]
     headers['cache-control'] = hit.path.includes('/_astro/') ? 'public, max-age=31536000, immutable' : 'public, max-age=300'
     headers['accept-ranges'] = 'bytes'
+    // The extension registry is public data for the CLI and other tools.
+    if (hit.path.startsWith('/registry/')) headers['access-control-allow-origin'] = '*'
     // Byte ranges, so browsers can stream and seek video (Safari requires this)
     const range = req.headers.get('range')?.match(/^bytes=(\d*)-(\d*)$/)
     if (range && (range[1] || range[2])) {

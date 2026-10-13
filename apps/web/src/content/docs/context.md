@@ -39,6 +39,8 @@ Every `run`, action, loader, source, form `onSubmit` and AI tool receives a **co
 | `ctx.toast(options)` | Show a toast. Returns `{ update, hide }`. |
 | `ctx.confirm(options)` | Ask the user to confirm. Resolves to a boolean. |
 | `ctx.setQuery(text)` | Change the search text. |
+| `ctx.selection` | Items the user marked in a [multi-select](/docs/multi-select) list (empty otherwise). |
+| `ctx.labels` | The active [labels](/docs/i18n), for translated messages. |
 | `ctx.bar` | The [Qikbar instance](/docs/api#instance). |
 
 ## Storage
