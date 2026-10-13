@@ -192,7 +192,7 @@ export function Stats() {
   const { fps } = useVideoConfig()
   const exit = t01(f, 106, 120)
   const stats: { value: (p: number) => string; label: string; at: number }[] = [
-    { value: (p) => `${(3.5 * p).toFixed(1)} KB`, label: 'to boot', at: 8 },
+    { value: (p) => `${(3.9 * p).toFixed(1)} KB`, label: 'to boot', at: 8 },
     { value: () => '0', label: 'dependencies', at: 20 },
     { value: (p) => `${Math.round(100 * p)}k`, label: 'rows, virtualized', at: 32 },
     { value: (p) => `~${Math.max(1, Math.round(3 * p))} ms`, label: 'to rank 10,000 items', at: 44 },

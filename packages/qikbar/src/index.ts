@@ -33,9 +33,8 @@ export type { AnthropicOptions, ByokOptions, GeminiOptions, OpenAIOptions, Proxy
 export { mcp } from './ai/mcp.js'
 export type { MCPOptions } from './ai/mcp.js'
 export { cachedEmbeddings, geminiEmbeddings, ollamaEmbeddings, openaiEmbeddings, proxyEmbeddings } from './ai/embeddings.js'
-export { en as defaultLabels, format as formatLabel } from './core/labels.js'
 
 // Theme helpers live in `@qikbar/qikbar/theme`; search, markdown and icons in `@qikbar/qikbar/utils`.
 // Keeping them out of this entry keeps the initial download tiny.
 
-export const version = '0.2.0'
+export const version = '0.2.1'

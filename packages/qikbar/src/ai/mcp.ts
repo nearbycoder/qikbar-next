@@ -159,7 +159,7 @@ export class MCPClient {
     this.ready ??= (async () => {
       const result = await this.request<{ protocolVersion?: string; serverInfo?: { name?: string; version?: string } }>(
         'initialize',
-        { protocolVersion: MCP_PROTOCOL_VERSION, capabilities: {}, clientInfo: { name: 'qikbar', version: '0.2.0' } },
+        { protocolVersion: MCP_PROTOCOL_VERSION, capabilities: {}, clientInfo: { name: 'qikbar', version: '0.2.1' } },
         signal,
       )
       if (result?.protocolVersion) this.protocol = result.protocolVersion

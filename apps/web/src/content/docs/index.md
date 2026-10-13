@@ -32,7 +32,7 @@ That's a complete integration. Press <kbd>⌘</kbd><kbd>K</kbd>.
 
 **Framework-agnostic.** The core is plain TypeScript with zero dependencies. Use the vanilla API anywhere, the React bindings in React and Next.js, or a single `<script>` tag.
 
-**Fast.** About 3.5 KB boots the shell. The UI loads when the browser is idle. Ranking 10,000 commands takes about 3 ms, and lists with 100,000 rows are virtualized.
+**Fast.** About 4 KB boots the shell. The UI loads when the browser is idle. Ranking 10,000 commands takes about 3 ms, and lists with 100,000 rows are virtualized.
 
 **AI-native.** Connect Claude, GPT, Gemini, a local model, or a proxy to your own server. Every command, route and data source becomes a tool the model can call. Users type what they want and Qikbar does it.
 

@@ -6,8 +6,7 @@
 
 import type { Bar } from '../ui/bar.js'
 import { allowedInInput, isEditable, matchesHotkey } from './hotkeys.js'
-import { defaultStorage, scopedStorage } from './storage.js'
-import type { AIClient, Extension, Item, QikbarConfig, QikbarEvents, QikbarInstance, ScopedStorage, Source, ToastHandle, ToastOptions, View } from './types.js'
+import type { AIClient, Extension, Item, QikbarConfig, QikbarEvents, QikbarInstance, Source, ToastHandle, ToastOptions, View } from './types.js'
 
 type Loader = () => Promise<{ Bar: typeof Bar }>
 
@@ -21,7 +20,6 @@ export class LazyQikbar implements QikbarInstance {
   private teardown: (() => void)[] = []
   private destroyed = false
   private removeLauncher?: () => void
-  private store?: ScopedStorage
 
   constructor(
     config: QikbarConfig,
@@ -90,9 +88,15 @@ export class LazyQikbar implements QikbarInstance {
     return import('./launcher.js').then(() => new Promise((r) => setTimeout(r)))
   }
 
-  private storage(): ScopedStorage {
-    this.store ??= scopedStorage(this.config.storage ?? defaultStorage(), this.config.namespace ?? 'qikbar')
-    return this.store
+  /** Read a stored value before the UI loads (same keys as the bar's storage). */
+  private stored<T>(key: string): T | undefined {
+    try {
+      const adapter = this.config.storage ?? globalThis.localStorage
+      const raw = adapter.getItem(`${this.config.namespace ?? 'qikbar'}:${key}`)
+      return raw == null ? undefined : (JSON.parse(raw) as T)
+    } catch {
+      return undefined
+    }
   }
 
   /** Load the UI now. Resolves when ready. */
@@ -204,13 +208,13 @@ export class LazyQikbar implements QikbarInstance {
     return this.bar?.commands() ?? []
   }
   pins(): string[] {
-    return this.bar?.pins() ?? this.storage().get<string[]>('pins') ?? []
+    return this.bar?.pins() ?? this.stored<string[]>('pins') ?? []
   }
   pin(id: string, pinned?: boolean) {
     this.run((b) => b.pin(id, pinned))
   }
   aliases(): Record<string, string> {
-    return this.bar?.aliases() ?? this.storage().get<Record<string, string>>('aliases') ?? {}
+    return this.bar?.aliases() ?? this.stored<Record<string, string>>('aliases') ?? {}
   }
   setAlias(id: string, alias: string | null) {
     this.run((b) => b.setAlias(id, alias))

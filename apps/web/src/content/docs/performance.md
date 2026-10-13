@@ -5,9 +5,9 @@ group: Reference
 order: 2
 ---
 
-## Boot: about 3.5 KB
+## Boot: about 4 KB
 
-`createQikbar()` returns a tiny shell (about 3.5 KB gzipped) that only listens for the hotkey and `data-qikbar-open` clicks. The UI, about 35 KB gzipped, loads in an `requestIdleCallback`, or immediately on first use, as a separate chunk. Calls you make before it loads (`register`, `use`, `on`…) are queued and replayed.
+`createQikbar()` returns a tiny shell (about 4 KB gzipped) that only listens for the hotkey and `data-qikbar-open` clicks. The UI, about 42 KB gzipped, loads in an `requestIdleCallback`, or immediately on first use, as a separate chunk. Calls you make before it loads (`register`, `use`, `on`…) are queued and replayed.
 
 Nothing renders until the first open, and no styles are injected before then either.
 
@@ -17,7 +17,9 @@ To load the UI earlier, for example when the pointer hovers your search button:
 button.addEventListener('pointerenter', () => bar.preload(), { once: true })
 ```
 
-The script-tag build bundles everything (about 47 KB gzipped).
+The script-tag build bundles everything (about 57 KB gzipped).
+
+These numbers are measured, not estimated: a test builds the package, bundles a minimal app against it the way your bundler would, and fails if boot grows past 4.2 KB or the UI past 45 KB. Optional pieces load only when you use them: the launcher button, locales, framework bindings, MCP and embeddings each live in their own module.
 
 ## Ranking: about 3 ms for 10,000 items
 
