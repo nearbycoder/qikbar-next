@@ -183,8 +183,6 @@ const gallery = catalog.map((c) => ({ title: c.extension.title, icon: c.extensio
 ---
 
 <Base>
-  <!-- Ship the bar's styles with the page, so the server-rendered hero bar below is styled on first paint -->
-  <style is:inline id="qikbar-styles" slot="head" set:html={qikbarCss}></style>
   <section class="hero">
     <div class="glow" aria-hidden="true"></div>
     <div class="container hero-inner">
@@ -207,6 +205,9 @@ const gallery = catalog.map((c) => ({ title: c.extension.title, icon: c.extensio
           <div class="window-title">acme.app</div>
         </div>
         <div class="window-body">
+          <!-- The bar's styles, shipped with the page so the static bar below is styled on first paint.
+               In the body so they come after the site CSS, the same order as when the bar injects them. -->
+          <style is:inline id="qikbar-styles" set:html={qikbarCss}></style>
           <div id="hero-bar" class="hero-bar">
             <!-- A static copy of the bar at rest, replaced the moment the real one mounts -->
             <div class="hero-bar-static" aria-hidden="true" inert set:html={heroBarHtml} />

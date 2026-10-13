@@ -31,6 +31,7 @@ export const css = /* css */ `
 .qb-header{position:relative;display:flex;align-items:center;gap:10px;height:var(--qb-input-height);padding:0 16px;border-bottom:1px solid var(--qb-border);flex-shrink:0}
 .qb-header-icon{color:var(--qb-fg-subtle);display:flex}
 .qb-input{flex:1;min-width:0;height:100%;border:0;outline:0;background:transparent;font-size:var(--qb-input-font-size);padding:0;caret-color:var(--qb-accent)}
+.qb-input:focus,.qb-input:focus-visible{outline:0;box-shadow:none}
 .qb-input::placeholder{color:var(--qb-fg-subtle);opacity:1}
 .qb-input::-webkit-search-cancel-button{display:none}
 .qb-back{display:flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;background:var(--qb-kbd-bg);color:var(--qb-fg-muted);flex-shrink:0;transition:background .1s}
