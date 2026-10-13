@@ -91,7 +91,7 @@ bar.on('event', (e) => analytics.track(`qikbar_${e.type}`, e)) // open, search, 
 
 ### `@qikbar/qikbar`
 
-`createQikbar`, `list`, `grid`, `detail`, `form`, `chat`, `action`, `defineExtension`, `defineCommands`, `defineSource`, `defineTool`, `anthropic`, `openai`, `openaiCompatible`, `ollama`, `gemini`, `browserAI`, `proxy`, `byok`, `mcp`, `openaiEmbeddings`, `geminiEmbeddings`, `ollamaEmbeddings`, `proxyEmbeddings`, `cachedEmbeddings`, `defaultLabels`, `formatLabel`, `formatHotkey`, `parseHotkey`, `matchesHotkey`, `isMac`, `memoryStorage`, `version`, and all types.
+`createQikbar`, `list`, `grid`, `detail`, `form`, `chat`, `action`, `defineExtension`, `defineCommands`, `defineSource`, `defineTool`, `anthropic`, `openai`, `openaiCompatible`, `ollama`, `gemini`, `browserAI`, `proxy`, `byok`, `mcp`, `openaiEmbeddings`, `geminiEmbeddings`, `ollamaEmbeddings`, `proxyEmbeddings`, `cachedEmbeddings`, `formatHotkey`, `parseHotkey`, `matchesHotkey`, `isMac`, `memoryStorage`, `version`, and all types.
 
 ### `@qikbar/qikbar/ai`
 
@@ -99,7 +99,7 @@ The AI providers, plus `mcp`, `MCPClient`, `MCPError`, the embedding helpers, `c
 
 ### `@qikbar/qikbar/locales`
 
-`en`, `es`, `fr`, `de`, `pt`, `it`, `nl`, `ja`, `zh`, `ko`, `locales` and `localeFor(tag)`. See [Translations](/docs/i18n).
+`en`, `es`, `fr`, `de`, `pt`, `it`, `nl`, `ja`, `zh`, `ko`, `locales`, `localeFor(tag)` and `format(template, vars)`. See [Translations](/docs/i18n).
 
 ### `@qikbar/qikbar/element`
 

@@ -10,7 +10,7 @@
 import { en, type Labels } from '../core/labels.js'
 
 export type { Labels } from '../core/labels.js'
-export { en }
+export { en, format } from '../core/labels.js'
 
 export const es: Labels = {
   placeholder: 'Busca comandos, páginas y más…',

@@ -5,6 +5,11 @@ group: Reference
 order: 7
 ---
 
+## 0.2.1
+
+- **Smaller boot.** 0.2.0 accidentally loaded the English labels and the storage helpers before the UI, growing the boot bundle from about 3.5 KB to 4.9 KB gzipped. It's back to about 3.9 KB, and a new test fails the build if it grows past 4.2 KB.
+- `defaultLabels` and `formatLabel` are no longer exported from `@qikbar/qikbar` (they pulled the labels into every app). Use `en` and `format` from `@qikbar/qikbar/locales`.
+
 ## 0.2.0
 
 A big release: mobile, personalization, MCP and WebMCP, translations, and official bindings for every major framework. Everything is backwards compatible.

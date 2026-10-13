@@ -1,6 +1,6 @@
 {
   "name": "@qikbar/qikbar",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "The open-source command bar for any web app. Raycast-style search, routing, actions, extensions and AI in one tiny, themeable package.",
   "keywords": [
     "command-bar",

@@ -1,4 +1,5 @@
 import { build } from 'esbuild'
+import { libraryBuild } from './build.config'
 import { gzipSync } from 'node:zlib'
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 
@@ -8,31 +9,7 @@ mkdirSync('dist', { recursive: true })
 const common = { bundle: true, target: 'es2020', legalComments: 'none', sourcemap: true } as const
 
 // ESM with shared chunks so `@qikbar/qikbar` and `@qikbar/qikbar/react` share one copy.
-await build({
-  ...common,
-  entryPoints: {
-    index: 'src/index.ts',
-    ai: 'src/ai/index.ts',
-    react: 'src/react/index.tsx',
-    server: 'src/server/index.ts',
-    extensions: 'src/extensions/index.ts',
-    theme: 'src/theme.ts',
-    utils: 'src/utils.ts',
-    locales: 'src/locales/index.ts',
-    element: 'src/element/index.ts',
-    vue: 'src/vue/index.ts',
-    svelte: 'src/svelte/index.ts',
-    solid: 'src/solid/index.ts',
-  },
-  outdir: 'dist',
-  format: 'esm',
-  splitting: true,
-  chunkNames: 'chunks/[name]-[hash]',
-  external: ['react', 'react-dom', 'vue', 'solid-js', 'node:*'],
-  jsx: 'automatic',
-  minifySyntax: true,
-  banner: { js: '' },
-})
+await build({ ...libraryBuild, sourcemap: true, outdir: 'dist' })
 
 // Script-tag build: window.Qikbar
 await build({

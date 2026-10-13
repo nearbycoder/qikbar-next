@@ -66,7 +66,7 @@ Press <kbd>⌘K</kbd>.
 - **Mobile**: a touch layout with long-press actions, a launcher button, and sizing that stays above the on-screen keyboard.
 - **Translated**: every string is a label, with 10 bundled languages.
 - **Theming**: 14 presets, 30+ CSS variables, automatic light and dark, Tailwind-friendly slot classes, or unstyled.
-- **Tiny and fast**: zero dependencies, about 3.5 KB to boot, the UI loads when the browser is idle, and virtualized lists handle 100k rows.
+- **Tiny and fast**: zero dependencies, about 4 KB to boot, the UI loads when the browser is idle, and virtualized lists handle 100k rows.
 - **Any framework**: React, Vue, Svelte, Solid, a `<qik-bar>` web component (Angular, HTMX, plain HTML), or vanilla JS.
 - **Analytics-ready**: `onEvent` reports searches, empty searches, runs and more, for PostHog, Plausible or anything else.
 - **Accessible**: ARIA combobox and listbox, focus management, reduced motion.

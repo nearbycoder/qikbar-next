@@ -183,7 +183,7 @@ function layout({ title, description, kicker, path, variant = 'page' }: OgInput)
             h('div', { display: 'flex', gap: 16, whiteSpace: 'nowrap' }, h('div', { color: '#a7f3d0' }, 'your app'), h('div', { color: C.brand }, 'deserves.')),
           ),
           h('div', { fontSize: 25, color: C.muted, marginTop: 22, lineHeight: 1.4 }, 'Open-source search, navigation, actions and AI for any web app.'),
-          h('div', { display: 'flex', marginTop: 30 }, chips(['MIT', 'Zero deps', '3.5 KB boot'])),
+          h('div', { display: 'flex', marginTop: 30 }, chips(['MIT', 'Zero deps', '4 KB boot'])),
         ),
         // resvg can't render satori's box-shadow filter; a gradient layer stands in for the glow.
         h(

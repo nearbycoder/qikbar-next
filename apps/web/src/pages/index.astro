@@ -122,7 +122,7 @@ const features = [
   { icon: 'star', title: 'Pins, aliases & undo', body: 'Users pin favorites, give commands short aliases and undo mistakes with ⌘Z. It learns how each person works.' },
   { icon: 'palette', title: 'Themeable & translated', body: '14 presets, 30+ CSS variables, Tailwind slots or unstyled, and every string in 10 languages. It looks and reads like your app.' },
   { icon: 'keyboard', title: 'Keyboard first', body: 'Global shortcuts and sequences ("g s"), action shortcuts, inline arguments, Tab to AI and Esc to go back. Accessible combobox markup.' },
-  { icon: 'package', title: 'Zero dependencies', body: 'About 3.5 KB to boot. The UI loads when the browser is idle. Virtualized lists handle 100,000 rows. React, Vue, Svelte, Solid or a web component.' },
+  { icon: 'package', title: 'Zero dependencies', body: 'About 4 KB to boot. The UI loads when the browser is idle. Virtualized lists handle 100,000 rows. React, Vue, Svelte, Solid or a web component.' },
 ]
 
 const presetList = Object.values(presets).filter((p) => !['light', 'dark'].includes(p.name))
@@ -175,7 +175,7 @@ const compare = {
 const faqs = [
   ['Is Qikbar really free?', 'Yes. It’s MIT licensed with no paid tier, no telemetry and no account. AI features use your own provider and keys.'],
   ['Do I need React?', 'No. The core is plain TypeScript with zero dependencies and works anywhere. @qikbar/qikbar/react is an optional thin wrapper.'],
-  ['How big is it?', 'About 3.5 KB gzipped boots the shell that listens for ⌘K. The full UI (about 35 KB gzipped) loads when the browser is idle.'],
+  ['How big is it?', 'About 4 KB gzipped boots the shell that listens for ⌘K. The full UI (about 42 KB gzipped) loads when the browser is idle.'],
   ['Can the AI do things in my app?', 'Yes. Your commands, routes and sources become tools the model can call. Destructive actions ask the user to confirm first.'],
   ['Where do API keys live?', 'On your server, with createHandler from @qikbar/qikbar/server and proxy() in the browser. Or let users bring their own key, stored only in their browser.'],
   ['Will it match my design?', 'Pick one of 14 presets or map its 30+ CSS variables onto your design tokens. It follows your app’s light and dark mode automatically.'],
@@ -399,7 +399,7 @@ const gallery = catalog.map((c) => ({ title: c.extension.title, icon: c.extensio
     <span class="eyebrow"><Icon name="zap" size={14} /> Performance</span>
     <h2 class="section-title">Fast at any size.</h2>
     <div class="stats">
-      <div class="stat card"><strong>3.5<small>KB</small></strong><span>gzipped to boot. The UI loads when the browser is idle.</span></div>
+      <div class="stat card"><strong>4<small>KB</small></strong><span>gzipped to boot. The UI loads when the browser is idle.</span></div>
       <div class="stat card"><strong>100k</strong><span>rows, virtualized. Scrolling stays at 60fps.</span></div>
       <div class="stat card"><strong>~3<small>ms</small></strong><span>to rank 10,000 commands on each keystroke.</span></div>
       <div class="stat card"><strong>0</strong><span>dependencies. No React needed, no CSS-in-JS, no runtime.</span></div>
