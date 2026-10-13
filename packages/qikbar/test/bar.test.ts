@@ -116,7 +116,7 @@ describe('bar', () => {
     await settle()
     expect(t.$('.qb-footer-btn.qb-primary')?.textContent).toContain('Run Command')
     await t.press('.', { ctrlKey: true })
-    expect(t.$$('.qb-action .qb-action-title').map((e) => e.textContent)).toEqual(['Run Command', 'Share'])
+    expect(t.$$('.qb-action .qb-action-title').map((e) => e.textContent)).toEqual(['Run Command', 'Share', 'Pin to Top', 'Set Alias…'])
     await t.press('ArrowDown')
     await t.press('Enter')
     await tick()

@@ -2,7 +2,6 @@ import type { Action, ChatView, DetailView, FormField, FormView, GridView, Item,
 import type { Bar, Frame, Row } from './bar.js'
 import { copyText } from './nav.js'
 import { h, highlight, renderAccessory, renderIcon, renderKbd, renderTag } from './dom.js'
-import { renderMarkdown } from './markdown.js'
 
 export interface ViewRenderer {
   readonly frame: Frame
@@ -21,7 +20,11 @@ export interface ViewRenderer {
   placeholder?(): string | undefined
   footerPrimary?(): { title: string; hotkey: string; run: () => void } | undefined
   viewActions?(): Action[]
+  /** Re-render every row (labels, pins or marks changed). */
+  refresh?(): void
 }
+
+const LONG_PRESS_MS = 480
 
 const VIRTUAL_THRESHOLD = 150
 const OVERSCAN = 10
@@ -53,6 +56,7 @@ export class ListRenderer implements ViewRenderer {
   protected sectionHeight = 30
   private rafId = 0
   private detailFor?: Item
+  private press?: { timer: ReturnType<typeof setTimeout>; x: number; y: number; fired: boolean }
 
   constructor(
     protected bar: Bar,
@@ -61,7 +65,7 @@ export class ListRenderer implements ViewRenderer {
     this.inner = h('div', { class: 'qb-list-inner' })
     this.scroller = h(
       'div',
-      { class: `${bar.cls('qb-scroll qb-list', 'list')}`, role: 'listbox', id: `${bar.instanceId}-list`, 'aria-label': 'Results', tabindex: '-1' },
+      { class: `${bar.cls('qb-scroll qb-list', 'list')}`, role: 'listbox', id: `${bar.instanceId}-list`, 'aria-label': bar.t('results'), tabindex: '-1' },
       this.inner,
     )
     this.emptyEl = h('div', { class: 'qb-empty', hidden: true })
@@ -74,7 +78,10 @@ export class ListRenderer implements ViewRenderer {
     }
     this.scroller.addEventListener('pointermove', this.onPointerMove)
     this.scroller.addEventListener('click', this.onClick)
-    this.scroller.addEventListener('pointerdown', (e) => e.preventDefault())
+    this.scroller.addEventListener('pointerdown', this.onPointerDown)
+    this.scroller.addEventListener('pointerup', this.cancelPress)
+    this.scroller.addEventListener('pointercancel', this.cancelPress)
+    this.scroller.addEventListener('contextmenu', this.onContextMenu)
     this.scroller.addEventListener('scroll', this.onScroll, { passive: true })
   }
 
@@ -82,6 +89,16 @@ export class ListRenderer implements ViewRenderer {
     const cs = getComputedStyle(this.bar.dom!.root)
     this.rowHeight = px(cs.getPropertyValue('--qb-row-height'), 42)
     this.sectionHeight = px(cs.getPropertyValue('--qb-section-height'), 30)
+    // Touch mode enforces a minimum tap target (see styles).
+    if (this.bar.isTouch) this.rowHeight = Math.max(this.rowHeight, 48)
+  }
+
+  refresh() {
+    this.cache.clear()
+    this.inner.replaceChildren()
+    this.renderedKeys = []
+    this.selectedEl = undefined
+    this.update()
   }
 
   update() {
@@ -157,7 +174,13 @@ export class ListRenderer implements ViewRenderer {
   }
 
   protected rowSig(row: Row): unknown {
-    return row.kind === 'section' ? row.title : `${row.index}|${row.positions?.join(',') ?? ''}`
+    if (row.kind === 'section') return row.title
+    let sig = `${row.index}|${row.positions?.join(',') ?? ''}`
+    if (this.frame.view.type === 'root' && this.bar.personalize) {
+      const id = this.bar.idOf(row.item)
+      sig += `|${this.bar.aliasOf(id) ?? ''}|${this.bar.pins().includes(id) ? 'p' : ''}`
+    }
+    return sig
   }
 
   protected rowEl(row: Row): HTMLElement {
@@ -178,6 +201,12 @@ export class ListRenderer implements ViewRenderer {
     const { item } = row
     const isRoot = this.frame.view.type === 'root'
     const right: (HTMLElement | null)[] = []
+    if (isRoot && this.bar.personalize) {
+      const id = this.bar.idOf(item)
+      const alias = this.bar.aliasOf(id)
+      if (alias) right.push(h('span', { class: 'qb-alias', title: this.bar.t('alias') }, alias))
+      if (this.bar.pins().includes(id)) right.push(h('span', { class: 'qb-pin', title: this.bar.t('pinned') }, renderIcon('pin', 13)))
+    }
     if (item.accessories?.length) right.push(h('span', { class: 'qb-item-accessories' }, ...item.accessories.map(renderAccessory)))
     else if (item.shortcut) right.push(h('span', { class: 'qb-item-accessories' }, renderKbd(item.shortcut)))
     if (isRoot && !item.accessories?.length && !item.shortcut) right.push(h('span', { class: 'qb-item-kind' }, this.kindOf(item)))
@@ -190,6 +219,7 @@ export class ListRenderer implements ViewRenderer {
         'aria-selected': 'false',
         'data-index': String(row.index),
       },
+      this.bar.isMulti(this.frame) ? h('span', { class: 'qb-check', 'aria-hidden': 'true' }, renderIcon('check', 12)) : null,
       h('span', { class: 'qb-item-icon' }, renderIcon(item.icon ?? (isRoot ? 'command' : undefined), 16)),
       h(
         'span',
@@ -202,10 +232,10 @@ export class ListRenderer implements ViewRenderer {
   }
 
   private kindOf(item: Item): string {
-    if (this.bar.itemExt.get(item)) return 'Command'
-    if (item.href) return 'Page'
-    if (item.url) return 'Link'
-    return 'Command'
+    if (this.bar.itemExt.get(item)) return this.bar.t('kindCommand')
+    if (item.href) return this.bar.t('kindPage')
+    if (item.url) return this.bar.t('kindLink')
+    return this.bar.t('kindCommand')
   }
 
   protected updateSelection() {
@@ -214,6 +244,16 @@ export class ListRenderer implements ViewRenderer {
     if (this.selectedEl && this.selectedEl !== el) this.selectedEl.setAttribute('aria-selected', 'false')
     if (el) el.setAttribute('aria-selected', 'true')
     this.selectedEl = el
+    if (this.bar.isMulti(this.frame)) {
+      for (const r of this.frame.itemRows) {
+        const rowEl = this.cache.get(r.key)?.el
+        if (!rowEl) continue
+        const marked = this.bar.isMarked(this.frame, r.key)
+        if (marked) rowEl.dataset.marked = ''
+        else delete rowEl.dataset.marked
+        rowEl.setAttribute('aria-checked', marked ? 'true' : 'false')
+      }
+    }
   }
 
   protected updateEmpty() {
@@ -226,18 +266,18 @@ export class ListRenderer implements ViewRenderer {
     }
     const view = f.view as ListView
     let icon = 'search'
-    let title = 'No results'
-    let desc: Node | string | null = f.query ? `Nothing matches “${f.query}”` : null
+    let title = this.bar.t('noResults')
+    let desc: Node | string | null = f.query ? this.bar.t('nothingMatches', { query: f.query }) : null
     if (f.error) {
       icon = 'alert'
-      title = 'Couldn’t load results'
+      title = this.bar.t('loadFailed')
       desc = f.error
     } else if (view.emptyView) {
       icon = (view.emptyView.icon as string) ?? icon
       title = view.emptyView.title
       desc = view.emptyView.description ?? null
     } else if (f.view.type === 'root' && !f.query) {
-      title = 'Start typing to search'
+      title = this.bar.t('startTyping')
       desc = null
     }
     this.emptyEl.replaceChildren(
@@ -255,7 +295,7 @@ export class ListRenderer implements ViewRenderer {
     if (item === this.detailFor) return
     this.detailFor = item
     if (!item?.detail) {
-      pane.innerHTML = item?.description ? renderMarkdown(item.description) : ''
+      pane.innerHTML = item?.description ? this.bar.md(item.description) : ''
       return
     }
     let value = detailCache.get(item)
@@ -264,13 +304,13 @@ export class ListRenderer implements ViewRenderer {
       value = typeof d === 'function' ? Promise.resolve(d()) : d
       detailCache.set(item, value)
     }
-    if (typeof value === 'string') pane.innerHTML = renderMarkdown(value)
+    if (typeof value === 'string') pane.innerHTML = this.bar.md(value)
     else {
       pane.innerHTML = ''
       value.then(
         (md) => {
           detailCache.set(item, md)
-          if (this.detailFor === item) pane.innerHTML = renderMarkdown(md)
+          if (this.detailFor === item) pane.innerHTML = this.bar.md(md)
         },
         (err) => {
           if (this.detailFor === item) pane.textContent = String(err?.message ?? err)
@@ -280,6 +320,9 @@ export class ListRenderer implements ViewRenderer {
   }
 
   private onPointerMove = (e: PointerEvent) => {
+    const p = this.press
+    if (p && !p.fired && Math.hypot(e.clientX - p.x, e.clientY - p.y) > 8) this.cancelPress()
+    if (e.pointerType !== 'mouse') return
     const el = (e.target as Element).closest?.('[data-index]') as HTMLElement | null
     if (!el) return
     const index = Number(el.dataset.index)
@@ -289,8 +332,60 @@ export class ListRenderer implements ViewRenderer {
   private onClick = (e: MouseEvent) => {
     const el = (e.target as Element).closest?.('[data-index]') as HTMLElement | null
     if (!el) return
+    if (this.press?.fired) {
+      // The long-press already opened the actions; don't let this click run the row or close the panel.
+      this.press = undefined
+      e.stopPropagation()
+      return
+    }
+    const index = Number(el.dataset.index)
+    this.select(index, false)
+    const item = this.frame.itemRows[index]?.item
+    if (item && this.bar.isMulti(this.frame)) {
+      if (e.shiftKey) return this.bar.markRange(this.frame, item)
+      if (e.metaKey || e.ctrlKey) return this.bar.toggleMark(this.frame, item)
+      if (this.frame.marked?.size) return this.bar.toggleMark(this.frame, item)
+    }
+    this.bar.runPrimary(this.frame, e.metaKey || e.ctrlKey ? 1 : 0, 'click')
+  }
+
+  /** Keep focus in the search box; on touch, a long press opens the actions. */
+  private onPointerDown = (e: PointerEvent) => {
+    e.preventDefault()
+    this.cancelPress()
+    if (e.pointerType === 'mouse') return
+    const el = (e.target as Element).closest?.('[data-index]') as HTMLElement | null
+    if (!el) return
+    const index = Number(el.dataset.index)
+    const press = {
+      x: e.clientX,
+      y: e.clientY,
+      fired: false,
+      timer: setTimeout(() => {
+        press.fired = true
+        this.select(index, false)
+        this.bar.openPanel()
+        navigator.vibrate?.(8)
+      }, LONG_PRESS_MS),
+    }
+    this.press = press
+  }
+
+  private cancelPress = (e?: Event) => {
+    const p = this.press
+    if (!p) return
+    clearTimeout(p.timer)
+    // Keep the "fired" flag until the click that follows the release.
+    if (!p.fired || e?.type === 'pointercancel') this.press = undefined
+  }
+
+  private onContextMenu = (e: MouseEvent) => {
+    const el = (e.target as Element).closest?.('[data-index]') as HTMLElement | null
+    if (!el) return
+    e.preventDefault()
+    if (this.press?.fired || this.bar.panel) return
     this.select(Number(el.dataset.index), false)
-    this.bar.runPrimary(this.frame, e.metaKey || e.ctrlKey ? 1 : 0)
+    this.bar.openPanel()
   }
 
   select(index: number, scroll = true) {
@@ -345,10 +440,19 @@ export class ListRenderer implements ViewRenderer {
   onKey(e: KeyboardEvent): boolean {
     const k = e.key
     const mod = e.metaKey || e.ctrlKey
+    if ((k === 'ArrowDown' || k === 'ArrowUp') && e.shiftKey && !mod && this.bar.isMulti(this.frame)) {
+      const current = this.frame.itemRows[this.frame.selected]?.item
+      if (current) this.bar.toggleMark(this.frame, current, true)
+      this.move(k === 'ArrowDown' ? 1 : -1)
+      const next = this.frame.itemRows[this.frame.selected]?.item
+      if (next) this.bar.toggleMark(this.frame, next, true)
+      return true
+    }
     if (k === 'ArrowDown' && mod) return this.select(this.frame.itemRows.length - 1), true
     if (k === 'ArrowUp' && mod) return this.select(0), true
-    if (k === 'ArrowDown' || (e.ctrlKey && !e.metaKey && !e.altKey && (k === 'n' || k === 'j'))) return this.move(1), true
-    if (k === 'ArrowUp' || (e.ctrlKey && !e.metaKey && !e.altKey && k === 'p')) return this.move(-1), true
+    const emacs = e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey
+    if (k === 'ArrowDown' || (emacs && (k === 'n' || k === 'j'))) return this.move(1), true
+    if (k === 'ArrowUp' || (emacs && k === 'p')) return this.move(-1), true
     if (k === 'PageDown') return this.move(8), true
     if (k === 'PageUp') return this.move(-8), true
     if (k === 'Enter' && !mod && !e.altKey) {
@@ -386,6 +490,7 @@ export class ListRenderer implements ViewRenderer {
 
   destroy() {
     cancelAnimationFrame(this.rafId)
+    if (this.press) clearTimeout(this.press.timer)
   }
 }
 
@@ -444,6 +549,7 @@ export class GridRenderer extends ListRenderer {
     return h(
       'div',
       { class: this.bar.cls('qb-cell', 'item'), role: 'option', id: optionId(this.bar, row.key), 'aria-selected': 'false', 'data-index': String(row.index), title: item.title },
+      this.bar.isMulti(this.frame) ? h('span', { class: 'qb-check', 'aria-hidden': 'true' }, renderIcon('check', 12)) : null,
       media,
       h('div', { class: 'qb-cell-title' }, highlight(item.title, row.positions)),
       item.subtitle ? h('div', { class: 'qb-cell-subtitle' }, item.subtitle) : null,
@@ -528,7 +634,7 @@ export class DetailRenderer implements ViewRenderer {
     if (key === this.rendered) return
     this.rendered = key
     const stick = this.body.scrollTop + this.body.clientHeight >= this.body.scrollHeight - 24
-    let html = renderMarkdown(d.text)
+    let html = this.bar.md(d.text)
     if (!d.done) html += '<span class="qb-caret"></span>'
     if (d.error) html += `<p class="qb-msg-error">${d.error.replace(/</g, '&lt;')}</p>`
     this.body.innerHTML = html
@@ -549,13 +655,13 @@ export class DetailRenderer implements ViewRenderer {
     const d = this.frame.detail
     return [
       {
-        title: 'Copy Content',
+        title: this.bar.t('copyContent'),
         icon: 'copy',
         shortcut: 'mod+shift+c',
         keepOpen: true,
         run: async (ctx) => {
           const ok = await ctx.copy(d?.text ?? '')
-          ctx.toast({ title: ok ? 'Copied to clipboard' : 'Copy failed', style: ok ? 'success' : 'failure' })
+          ctx.toast({ title: ok ? this.bar.t('copied') : this.bar.t('copyFailed'), style: ok ? 'success' : 'failure' })
           return false as const
         },
       },
@@ -665,7 +771,7 @@ export class FormRenderer implements ViewRenderer {
     form.errors = {}
     for (const f of v.fields) {
       const value = form.values[f.name]
-      if (f.required && (value === '' || value == null || value === false)) form.errors[f.name] = `${f.label ?? f.name} is required`
+      if (f.required && (value === '' || value == null || value === false)) form.errors[f.name] = this.bar.t('fieldRequired', { field: f.label ?? f.name })
       else {
         const msg = f.validate?.(value, form.values)
         if (msg) form.errors[f.name] = msg
@@ -678,7 +784,7 @@ export class FormRenderer implements ViewRenderer {
       return
     }
     void this.bar.runAction(this.frame, undefined, {
-      title: v.submitLabel ?? 'Submit',
+      title: v.submitLabel ?? this.bar.t('submit'),
       run: (ctx) => v.onSubmit({ ...form.values }, ctx),
     })
   }
@@ -700,7 +806,7 @@ export class FormRenderer implements ViewRenderer {
 
   footerPrimary() {
     const v = this.frame.view as FormView
-    return { title: v.submitLabel ?? 'Submit', hotkey: 'mod+enter', run: () => this.submit() }
+    return { title: v.submitLabel ?? this.bar.t('submit'), hotkey: 'mod+enter', run: () => this.submit() }
   }
 
   focusTarget() {
@@ -774,7 +880,7 @@ export class ChatRenderer implements ViewRenderer {
             )
           : null
         const md = h('div', { class: 'qb-md' })
-        let html = renderMarkdown(turn.text)
+        let html = this.bar.md(turn.text)
         if (turn.streaming) html += turn.text || !turn.tools.length ? '<span class="qb-caret"></span>' : ''
         md.innerHTML = html
         el = h('div', { class: 'qb-msg-ai' }, head, tools, md, turn.error ? h('div', { class: 'qb-msg-error' }, turn.error) : null)
@@ -788,13 +894,13 @@ export class ChatRenderer implements ViewRenderer {
 
   private empty(): HTMLElement {
     const suggestions = this.bar.aiOptions?.suggestions ?? []
-    const defaults = suggestions.length ? suggestions : ['What can I do here?', 'Summarize this page']
+    const defaults = suggestions.length ? suggestions : this.bar.t('chatSuggestions').split('|')
     return h(
       'div',
       { class: 'qb-chat-empty' },
       renderIcon('sparkles', 26),
-      h('div', { class: 'qb-empty-title' }, `Ask ${this.bar.aiName} anything`),
-      h('div', { class: 'qb-empty-desc' }, 'Ask a question or tell it what to do, like “take me to billing”.'),
+      h('div', { class: 'qb-empty-title' }, this.bar.t('askAnything')),
+      h('div', { class: 'qb-empty-desc' }, this.bar.t('chatHint')),
       h(
         'div',
         { class: 'qb-suggestions' },
@@ -826,31 +932,31 @@ export class ChatRenderer implements ViewRenderer {
 
   placeholder() {
     const turns = this.frame.chat?.turns.length ?? 0
-    return turns ? 'Ask a follow-up…' : `Ask ${this.bar.aiName} anything…`
+    return turns ? this.bar.t('followUp') : this.bar.t('askAnythingPlaceholder')
   }
 
   footerPrimary() {
     const streaming = !!this.frame.chat?.controller
-    if (streaming) return { title: 'Stop', hotkey: 'escape', run: () => void this.bar.stopChat(this.frame) }
-    return { title: 'Send', hotkey: 'enter', run: () => this.bar.sendChat(this.frame, this.frame.query) }
+    if (streaming) return { title: this.bar.t('stop'), hotkey: 'escape', run: () => void this.bar.stopChat(this.frame) }
+    return { title: this.bar.t('send'), hotkey: 'enter', run: () => this.bar.sendChat(this.frame, this.frame.query) }
   }
 
   viewActions(): Action[] {
     const view = this.frame.view as ChatView
     return [
       {
-        title: 'Copy Answer',
+        title: this.bar.t('copyAnswer'),
         icon: 'copy',
         shortcut: 'mod+shift+c',
         keepOpen: true,
         run: async (ctx) => {
           const ok = await copyText(this.lastAnswer())
-          ctx.toast({ title: ok ? 'Copied answer' : 'Nothing to copy', style: ok ? 'success' : 'failure' })
+          ctx.toast({ title: ok ? this.bar.t('copiedAnswer') : this.bar.t('nothingToCopy'), style: ok ? 'success' : 'failure' })
           return false as const
         },
       },
       {
-        title: 'New Chat',
+        title: this.bar.t('newChat'),
         icon: 'plus',
         shortcut: 'mod+shift+o',
         run: (ctx) => {
