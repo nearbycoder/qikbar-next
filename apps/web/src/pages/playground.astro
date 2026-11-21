@@ -23,44 +23,78 @@ import { examples } from '../data/playground'
           <button type="button" class="btn btn-brand run" data-run><Icon name="zap" size={14} /> Run <span class="kbd" data-run-kbd>⌘↵</span></button>
         </div>
       </div>
+      <div class="notice" data-shared-notice hidden>
+        Shared snippet loaded from URL. Review the code, then click <strong>Run</strong> to execute it in the isolated sandbox.
+      </div>
       <textarea spellcheck="false" autocapitalize="off" autocomplete="off" data-code aria-label="Configuration code"></textarea>
       <div class="error" data-error hidden></div>
     </section>
     <section class="preview">
-      <div id="pg-bar"></div>
-      <p class="hint">Helpers in scope: <code>list grid detail form chat action defineExtension extensions demoAI</code></p>
+      <iframe
+        id="pg-frame"
+        class="pg-frame"
+        src="/playground-frame/"
+        sandbox="allow-scripts allow-modals"
+        title="Qikbar playground preview"
+      ></iframe>
+      <p class="hint">Runs in a sandboxed iframe. Helpers in scope: <code>list grid detail form chat action defineExtension extensions demoAI</code></p>
     </section>
   </div>
 </Base>
 
 <script>
-  import * as Q from '@qikbar/qikbar'
-  import * as extensions from '@qikbar/qikbar/extensions'
-  import { demoAI } from '../scripts/demo-ai'
+  import { isMac } from '@qikbar/qikbar'
   import { examples } from '../data/playground'
 
+  const MAX_SHARED_LEN = 32_768
   const code = document.querySelector<HTMLTextAreaElement>('[data-code]')!
   const errorEl = document.querySelector<HTMLElement>('[data-error]')!
+  const noticeEl = document.querySelector<HTMLElement>('[data-shared-notice]')!
+  const frame = document.getElementById('pg-frame') as HTMLIFrameElement
   const tabs = [...document.querySelectorAll<HTMLButtonElement>('[data-example]')]
-  let bar: Q.QikbarInstance | undefined
 
-  const scope = { ...Q, extensions, demoAI }
-  if (!Q.isMac) document.querySelector('[data-run-kbd]')!.textContent = 'Ctrl ↵'
+  if (!isMac) document.querySelector('[data-run-kbd]')!.textContent = 'Ctrl ↵'
+
+  let frameReady = false
+  let pendingCode: string | null = null
+
+  const postToFrame = (msg: Record<string, unknown>) => {
+    frame.contentWindow?.postMessage(msg, '*')
+  }
+
+  const syncTheme = () => {
+    if (!frameReady) return
+    postToFrame({ type: 'theme', dark: document.documentElement.classList.contains('dark') })
+  }
+
+  new MutationObserver(syncTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+
+  window.addEventListener('message', (e: MessageEvent) => {
+    if (e.source !== frame.contentWindow) return
+    const data = e.data
+    if (!data || typeof data !== 'object') return
+    if (data.type === 'ready') {
+      frameReady = true
+      syncTheme()
+      if (pendingCode !== null) {
+        const src = pendingCode
+        pendingCode = null
+        postToFrame({ type: 'run', code: src })
+      }
+    } else if (data.type === 'error') {
+      const msg = typeof data.message === 'string' ? data.message : ''
+      errorEl.textContent = msg
+      errorEl.hidden = !msg
+    } else if (data.type === 'height' && typeof data.height === 'number' && Number.isFinite(data.height)) {
+      frame.style.height = `${Math.max(480, Math.min(1200, Math.round(data.height)))}px`
+    }
+  })
 
   function run() {
     errorEl.hidden = true
-    let config: Q.QikbarConfig
-    try {
-      // eslint-disable-next-line no-new-func
-      config = new Function(...Object.keys(scope), code.value)(...Object.values(scope)) ?? {}
-    } catch (err) {
-      errorEl.textContent = String(err instanceof Error ? err.message : err)
-      errorEl.hidden = false
-      return
-    }
-    bar?.destroy()
-    document.getElementById('pg-bar')!.replaceChildren()
-    bar = Q.createQikbar({ ...config, inline: '#pg-bar', hotkey: false, shortcuts: false, namespace: 'qikbar-playground' })
+    noticeEl.hidden = true
+    if (frameReady) postToFrame({ type: 'run', code: code.value })
+    else pendingCode = code.value
   }
 
   const encode = (s: string) => {
@@ -79,6 +113,7 @@ import { examples } from '../data/playground'
   function load(i: number) {
     tabs.forEach((t, j) => t.setAttribute('aria-selected', String(i === j)))
     code.value = examples[i]!.code
+    noticeEl.hidden = true
     history.replaceState(null, '', location.pathname)
     run()
   }
@@ -97,16 +132,21 @@ import { examples } from '../data/playground'
   document.querySelector('[data-share]')!.addEventListener('click', async () => {
     const url = `${location.origin}${location.pathname}#code=${encode(code.value)}`
     history.replaceState(null, '', url)
-    await navigator.clipboard.writeText(url)
-    window.qikbar.toast({ title: 'Link copied', style: 'success' })
+    try {
+      await navigator.clipboard.writeText(url)
+      window.qikbar.toast({ title: 'Link copied', style: 'success' })
+    } catch {
+      window.qikbar.toast({ title: 'Copy failed', style: 'failure' })
+    }
   })
 
+  // Shared URL snippets are never auto-executed on load; user must click Run.
   const shared = location.hash.match(/^#code=(.+)$/)?.[1]
-  if (shared) {
+  if (shared && shared.length <= MAX_SHARED_LEN) {
     try {
       code.value = decode(shared)
       tabs.forEach((t) => t.setAttribute('aria-selected', 'false'))
-      run()
+      noticeEl.hidden = false
     } catch {
       load(0)
     }
@@ -129,9 +169,11 @@ import { examples } from '../data/playground'
   .tool:hover { color: var(--text); }
   .run { height: 32px; font-size: 13px; padding: 0 12px; }
   .run .kbd { height: 18px; font-size: 10.5px; color: inherit; border-color: color-mix(in srgb, var(--brand-ink) 30%, transparent); background: transparent; }
+  .notice { padding: 10px 16px; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--brand) 10%, transparent); color: var(--text); font-size: 13px; }
   textarea { flex: 1; min-height: 520px; width: 100%; resize: vertical; border: 0; outline: none; padding: 18px 20px; background: var(--code-bg); color: var(--text); font: 13px/1.65 var(--mono); tab-size: 2; white-space: pre; }
   .error { padding: 12px 16px; border-top: 1px solid var(--border); color: #ef4444; font: 12.5px var(--mono); background: rgba(239, 68, 68, 0.08); }
   .preview { position: sticky; top: calc(var(--header) + 20px); padding: 28px clamp(8px, 2vw, 28px); border-radius: var(--radius); border: 1px solid var(--border); background: radial-gradient(circle at 30% 0%, color-mix(in srgb, var(--brand) 12%, transparent), transparent 55%), var(--bg-soft); }
+  .pg-frame { display: block; width: 100%; height: 484px; border: 0; background: transparent; }
   .hint { margin: 16px 2px 0; font-size: 12.5px; color: var(--subtle); }
   .hint code { font-size: 12px; }
 </style>

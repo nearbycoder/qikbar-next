@@ -13,7 +13,8 @@ interface Result {
   downloads?: { weekly: number }
 }
 
-const compact = (n: number) => new Intl.NumberFormat(undefined, { notation: 'compact' }).format(n)
+const compactFmt = new Intl.NumberFormat(undefined, { notation: 'compact' })
+const compact = (n: number) => compactFmt.format(n)
 
 export default defineExtension({
   name: 'npm',
@@ -44,10 +45,12 @@ export default defineExtension({
           emptyView: { title: 'Search npm', description: 'Find a package by name or keyword', icon: 'package' },
           items: async ({ query, signal }) => {
             if (!query.trim()) return []
-            const data = await fetch(`https://registry.npmjs.org/-/v1/search?size=20&text=${encodeURIComponent(query)}`, { signal }).then((r) => r.json())
+            const res = await fetch(`https://registry.npmjs.org/-/v1/search?size=20&text=${encodeURIComponent(query)}`, { signal })
+            if (!res.ok) throw new Error(`npm registry error ${res.status}`)
+            const data = await res.json()
             const pm: string = ctx.preferences.pm ?? 'npm'
             const install = (name: string, tool = pm) => (tool === 'npm' ? `npm install ${name}` : tool === 'yarn' ? `yarn add ${name}` : `${tool} add ${name}`)
-            return (data.objects as Result[]).map<Item>(({ package: p, downloads }) => ({
+            return ((data.objects ?? []) as Result[]).map<Item>(({ package: p, downloads }) => ({
               id: p.name,
               title: p.name,
               subtitle: p.description,
@@ -83,7 +86,7 @@ export default defineExtension({
                   .filter((t) => t !== pm)
                   .map((t) => action.copy(install(p.name, t), { title: `Copy ${t} Install`, shortcut: undefined, section: 'Install' })),
                 ...(p.links.repository ? [action.open(p.links.repository, { title: 'Open Repository', shortcut: 'mod+o' })] : []),
-                action.open(`https://bundlephobia.com/package/${p.name}`, { title: 'Check Bundle Size', icon: 'bar-chart', shortcut: undefined }),
+                action.open(`https://bundlephobia.com/package/${p.name.split('/').map(encodeURIComponent).join('/')}`, { title: 'Check Bundle Size', icon: 'bar-chart', shortcut: undefined }),
               ],
             }))
           },

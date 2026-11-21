@@ -120,7 +120,7 @@ const repo = 'https://github.com/nearbycoder/qikbar-next/blob/main/apps/web/src/
       <div class="sd-tools">
         <button type="button" class="sd-btn sd-cli" data-source-cli title="Copy the CLI command"><Icon name="terminal" size={13} /> <code data-source-cli-text></code></button>
         <button type="button" class="sd-btn" data-source-copy><Icon name="copy" size={13} /> Copy</button>
-        <a class="sd-btn" data-source-link href="#" target="_blank" rel="noopener"><Icon name="github" size={13} /> GitHub</a>
+        <a class="sd-btn" data-source-link href="#" target="_blank" rel="noopener noreferrer"><Icon name="github" size={13} /> GitHub</a>
         <button type="button" class="sd-btn icon" data-source-close aria-label="Close" autofocus><Icon name="x" size={15} /></button>
       </div>
     </div>
@@ -198,10 +198,15 @@ const repo = 'https://github.com/nearbycoder/qikbar-next/blob/main/apps/web/src/
   const fetchPreview = (slug: string) => {
     let p = previewCache.get(slug)
     if (!p) {
-      p = fetch(`/registry/preview/${slug}/`).then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`)
-        return r.text()
-      })
+      p = fetch(`/registry/preview/${encodeURIComponent(slug)}/`)
+        .then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`)
+          return r.text()
+        })
+        .catch((err) => {
+          previewCache.delete(slug)
+          throw err
+        })
       previewCache.set(slug, p)
     }
     return p
@@ -235,12 +240,20 @@ const repo = 'https://github.com/nearbycoder/qikbar-next/blob/main/apps/web/src/
   })
   dialog.querySelector('[data-source-cli]')!.addEventListener('click', async () => {
     const cmd = cliTextEl.textContent ?? ''
-    await navigator.clipboard.writeText(cmd)
-    window.qikbar.toast({ title: 'Command copied', message: cmd, style: 'success' })
+    try {
+      await navigator.clipboard.writeText(cmd)
+      window.qikbar.toast({ title: 'Command copied', message: cmd, style: 'success' })
+    } catch {
+      window.qikbar.toast({ title: 'Copy failed', style: 'failure' })
+    }
   })
   dialog.querySelector('[data-source-copy]')!.addEventListener('click', async () => {
-    await navigator.clipboard.writeText(bodyEl.querySelector('pre')?.innerText ?? '')
-    window.qikbar.toast({ title: 'Source copied', style: 'success' })
+    try {
+      await navigator.clipboard.writeText(bodyEl.querySelector('pre')?.innerText ?? '')
+      window.qikbar.toast({ title: 'Source copied', style: 'success' })
+    } catch {
+      window.qikbar.toast({ title: 'Copy failed', style: 'failure' })
+    }
   })
 </script>
 

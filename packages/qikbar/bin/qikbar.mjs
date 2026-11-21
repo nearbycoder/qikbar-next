@@ -11,10 +11,13 @@
  */
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join, relative, resolve } from 'node:path'
+import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const REGISTRY = (process.env.QIKBAR_REGISTRY || 'https://qikbar.com/registry').replace(/\/$/, '')
+const SAFE_NAME = /^[a-z0-9][a-z0-9_-]*$/i
+const SAFE_FILE = /^[a-z0-9][a-z0-9._-]*\.ts$/i
+const FETCH_TIMEOUT_MS = 15_000
 const color = process.stdout.isTTY && !process.env.NO_COLOR
 const paint = (code) => (s) => (color ? `\x1b[${code}m${s}\x1b[0m` : String(s))
 const bold = paint(1)
@@ -22,6 +25,19 @@ const dim = paint(2)
 const green = paint(32)
 const red = paint(31)
 const cyan = paint(36)
+
+function validateRegistry(url) {
+  let parsed
+  try {
+    parsed = new URL(url)
+  } catch {
+    throw new Error(`Invalid registry URL "${url}".`)
+  }
+  if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+    throw new Error(`Unsupported registry protocol "${parsed.protocol}". Use http:// or https://.`)
+  }
+  return url.replace(/\/$/, '')
+}
 
 function version() {
   try {
@@ -33,7 +49,7 @@ function version() {
 }
 
 function parseArgs(argv) {
-  const args = { _: [], flags: {} }
+  const args = { _: [], flags: Object.create(null) }
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i]
     if (a === '--') {
@@ -42,6 +58,7 @@ function parseArgs(argv) {
     }
     if (a.startsWith('--')) {
       const [key, inline] = a.slice(2).split('=', 2)
+      if (!key) continue
       if (inline !== undefined) args.flags[key] = inline
       else if (['dir', 'registry', 'cwd'].includes(key)) args.flags[key] = argv[++i]
       else args.flags[key] = true
@@ -53,10 +70,13 @@ function parseArgs(argv) {
 }
 
 async function get(path, registry) {
+  if (path !== 'index.json' && !SAFE_FILE.test(path)) {
+    throw new Error(`Refusing unsafe registry file path "${path}".`)
+  }
   const url = `${registry}/${path}`
   let res
   try {
-    res = await fetch(url, { headers: { 'user-agent': `qikbar-cli/${version()}` } })
+    res = await fetch(url, { headers: { 'user-agent': `qikbar-cli/${version()}` }, signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
   } catch (err) {
     throw new Error(`Couldn't reach ${url} (${err.cause?.code ?? err.message})`)
   }
@@ -110,9 +130,9 @@ function hasPackage(cwd) {
 async function cmdList(flags, registry) {
   const index = await loadIndex(registry)
   if (flags.json) return console.log(JSON.stringify(index.extensions, null, 2))
-  const width = Math.max(...index.extensions.map((e) => e.name.length))
+  const width = index.extensions.reduce((m, e) => Math.max(m, String(e.name ?? '').length), 0)
   console.log(bold(`${index.extensions.length} extensions`) + dim(`  ${registry}`))
-  for (const e of index.extensions) console.log(`  ${cyan(e.name.padEnd(width))}  ${e.description ?? e.title}`)
+  for (const e of index.extensions) console.log(`  ${cyan(String(e.name).padEnd(width))}  ${e.description ?? e.title}`)
   console.log(dim(`\nAdd one with: npx @qikbar/qikbar add <name>`))
 }
 
@@ -148,14 +168,27 @@ async function cmdAdd(names, flags, registry) {
   mkdirSync(dir, { recursive: true })
   const added = []
   for (const name of wanted) {
+    if (typeof name !== 'string' || !SAFE_NAME.test(name)) {
+      throw new Error(`Refusing unsafe extension name "${name}".`)
+    }
     const entry = index.extensions.find((e) => e.name === name)
-    const file = join(dir, `${name}.ts`)
+    const file = resolve(dir, `${name}.ts`)
+    const relToDir = relative(dir, file)
+    if (relToDir.startsWith('..') || isAbsolute(relToDir)) {
+      throw new Error(`Refusing to write outside target directory: "${file}".`)
+    }
+    const remoteFile = entry.file ?? `${name}.ts`
+    if (typeof remoteFile !== 'string' || !SAFE_FILE.test(remoteFile)) {
+      throw new Error(`Refusing unsafe extension source path "${remoteFile}".`)
+    }
     if (existsSync(file) && !flags.force) {
       console.log(`${dim('skip')}  ${relative(cwd, file)} ${dim('(exists — use --force to overwrite)')}`)
       continue
     }
-    const source = await (await get(entry.file ?? `${name}.ts`, registry)).text()
-    writeFileSync(file, source.startsWith('//') ? source : `// ${entry.title} — from ${registry}/${entry.file ?? `${name}.ts`}\n${source}`)
+    const source = await (await get(remoteFile, registry)).text()
+    const cleanTitle = String(entry.title ?? name).replace(/[\r\n]+/g, ' ')
+    const cleanUrl = `${registry}/${remoteFile}`.replace(/[\r\n]+/g, '')
+    writeFileSync(file, source.startsWith('//') ? source : `// ${cleanTitle} — from ${cleanUrl}\n${source}`)
     console.log(`${green('add')}   ${relative(cwd, file)}`)
     added.push({ name, file })
   }
@@ -188,9 +221,9 @@ ${dim('Registry: https://qikbar.com/extensions')}`
 
 async function main() {
   const { _: [command, ...rest], flags } = parseArgs(process.argv.slice(2))
-  const registry = (flags.registry ?? REGISTRY).replace(/\/$/, '')
   if (flags.version) return console.log(version())
   if (flags.help || !command || command === 'help') return console.log(HELP)
+  const registry = validateRegistry(flags.registry ?? REGISTRY)
   if (command === 'add' || command === 'install') return cmdAdd(rest, flags, registry)
   if (command === 'list' || command === 'ls') return cmdList(flags, registry)
   if (command === 'info' || command === 'show') return cmdInfo(rest, registry)

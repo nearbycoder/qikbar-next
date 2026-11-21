@@ -10,5 +10,8 @@
     "test": "bun run --filter @qikbar/qikbar test",
     "typecheck": "bun run --filter @qikbar/qikbar typecheck"
   },
-  "packageManager": "bun@1.4.2"
+  "packageManager": "bun@1.4.2",
+  "overrides": {
+    "fflate": "^0.7.5"
+  }
 }

@@ -11,8 +11,16 @@ const LOREM =
 
 function password(length: number) {
   const chars = 'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789!@#$%^&*-_'
-  const bytes = crypto.getRandomValues(new Uint32Array(length))
-  return Array.from(bytes, (b) => chars[b % chars.length]).join('')
+  const limit = Math.floor(0x1_0000_0000 / chars.length) * chars.length
+  const out: string[] = []
+  const buf = new Uint32Array(length * 2)
+  while (out.length < length) {
+    crypto.getRandomValues(buf)
+    for (let i = 0; i < buf.length && out.length < length; i++) {
+      if (buf[i]! < limit) out.push(chars[buf[i]! % chars.length]!)
+    }
+  }
+  return out.join('')
 }
 
 export default defineExtension({

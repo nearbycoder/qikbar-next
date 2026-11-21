@@ -1,3 +1,5 @@
+import { isSafeUrl } from './dom.js'
+
 export async function copyText(text: string): Promise<boolean> {
   try {
     await navigator.clipboard.writeText(text)
@@ -26,8 +28,9 @@ export async function copyText(text: string): Promise<boolean> {
  * normal navigation.
  */
 export function defaultNavigate(href: string, newTab: boolean) {
+  if (!isSafeUrl(href)) return
   if (newTab) {
-    window.open(href, '_blank', 'noopener')
+    window.open(href, '_blank', 'noopener,noreferrer')
     return
   }
   const existing = [...document.querySelectorAll<HTMLAnchorElement>('a[href]')].find(

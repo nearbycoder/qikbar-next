@@ -180,9 +180,14 @@ const active = nav
         btn.type = 'button'
         btn.textContent = 'Copy'
         btn.addEventListener('click', async () => {
-          await navigator.clipboard.writeText(pre.innerText)
-          btn.textContent = 'Copied'
-          setTimeout(() => (btn.textContent = 'Copy'), 1200)
+          try {
+            await navigator.clipboard.writeText(pre.innerText)
+            btn.textContent = 'Copied'
+            setTimeout(() => (btn.textContent = 'Copy'), 1200)
+          } catch {
+            btn.textContent = 'Failed'
+            setTimeout(() => (btn.textContent = 'Copy'), 1200)
+          }
         })
         wrap.append(btn)
       })

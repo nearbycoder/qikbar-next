@@ -22,6 +22,29 @@ const CSS = `.qb-launcher{position:fixed;z-index:2147482999;bottom:calc(var(--qb
 const SEARCH_SVG =
   '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>'
 
+const UNSAFE_SVG_TAGS = new Set(['script', 'foreignobject', 'iframe', 'object', 'embed', 'style', 'animate', 'set', 'handler'])
+
+function parseSafeSvg(markup: string): Element | null {
+  const tpl = document.createElement('template')
+  tpl.innerHTML = markup
+  const svg = tpl.content.firstElementChild
+  if (!svg || svg.tagName.toLowerCase() !== 'svg') return null
+  for (const el of [svg, ...svg.querySelectorAll('*')]) {
+    if (UNSAFE_SVG_TAGS.has(el.tagName.toLowerCase())) {
+      el.remove()
+      continue
+    }
+    for (const attr of [...el.attributes]) {
+      const name = attr.name.toLowerCase()
+      const val = attr.value.replace(/[\u0000-\u0020]+/g, '').toLowerCase()
+      if (name.startsWith('on') || ((name === 'href' || name === 'xlink:href' || name === 'src') && /^(javascript|vbscript|data):/.test(val))) {
+        el.removeAttribute(attr.name)
+      }
+    }
+  }
+  return svg
+}
+
 export function resolveLauncher(value: QikbarConfig['launcher']): LauncherOptions | undefined {
   if (!value) return undefined
   if (value === true) return {}
@@ -48,8 +71,10 @@ export function mountLauncher(options: LauncherOptions, label: string, onOpen: (
   if (options.touchOnly) button.dataset.touchOnly = ''
   if (options.offset != null) button.style.setProperty('--qb-launcher-offset', `${options.offset}px`)
   const icon = options.icon ?? SEARCH_SVG
-  if (icon.trimStart().startsWith('<svg')) button.innerHTML = icon
-  else button.textContent = icon
+  if (icon.trimStart().startsWith('<svg')) {
+    const svg = parseSafeSvg(icon)
+    if (svg) button.append(svg)
+  } else button.textContent = icon
   button.addEventListener('click', (e) => {
     e.preventDefault()
     onOpen()

@@ -2,11 +2,32 @@ import { action, defineExtension, list, type Item } from '@qikbar/qikbar'
 
 const API = 'https://api.frankfurter.dev/v1'
 let names: Promise<Record<string, string>> | undefined
-const currencies = () => (names ??= fetch(`${API}/currencies`).then((r) => r.json()))
+const currencies = () => {
+  if (!names) {
+    names = fetch(`${API}/currencies`)
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json() as Promise<Record<string, string>>
+      })
+      .catch((err) => {
+        names = undefined
+        throw err
+      })
+  }
+  return names
+}
 
+const fmtCache = new Map<string, Intl.NumberFormat>()
 const fmt = (value: number, code: string) => {
+  const digits = value < 1 ? 4 : 2
+  const key = `${code}:${digits}`
   try {
-    return new Intl.NumberFormat(undefined, { style: 'currency', currency: code, maximumFractionDigits: value < 1 ? 4 : 2 }).format(value)
+    let nf = fmtCache.get(key)
+    if (!nf) {
+      nf = new Intl.NumberFormat(undefined, { style: 'currency', currency: code, maximumFractionDigits: digits })
+      fmtCache.set(key, nf)
+    }
+    return nf.format(value)
   } catch {
     return `${value.toFixed(2)} ${code}`
   }

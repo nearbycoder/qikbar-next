@@ -48,8 +48,8 @@ const editHref = `https://github.com/nearbycoder/qikbar-next/edit/main/apps/web/
       <div class="page-actions">
         <button type="button" class="pa" data-copy-md={mdHref}><Icon name="copy" size={13} /> Copy as Markdown</button>
         <a class="pa" href={mdHref}><Icon name="file-text" size={13} /> View .md</a>
-        <a class="pa" href={`https://claude.ai/new?q=${encodeURIComponent(`Read ${new URL(mdHref, Astro.site)} and help me use Qikbar.`)}`} target="_blank" rel="noopener"><Icon name="sparkles" size={13} /> Open in Claude</a>
-        <a class="pa" href={`https://chatgpt.com/?q=${encodeURIComponent(`Read ${new URL(mdHref, Astro.site)} and help me use Qikbar.`)}`} target="_blank" rel="noopener"><Icon name="message" size={13} /> Open in ChatGPT</a>
+        <a class="pa" href={`https://claude.ai/new?q=${encodeURIComponent(`Read ${new URL(mdHref, Astro.site)} and help me use Qikbar.`)}`} target="_blank" rel="noopener noreferrer"><Icon name="sparkles" size={13} /> Open in Claude</a>
+        <a class="pa" href={`https://chatgpt.com/?q=${encodeURIComponent(`Read ${new URL(mdHref, Astro.site)} and help me use Qikbar.`)}`} target="_blank" rel="noopener noreferrer"><Icon name="message" size={13} /> Open in ChatGPT</a>
       </div>
       <div class="prose">
         <slot />
@@ -95,17 +95,27 @@ const editHref = `https://github.com/nearbycoder/qikbar-next/edit/main/apps/web/
         btn.className = 'btn btn-brand prompt-copy'
         btn.textContent = 'Copy prompt'
         btn.addEventListener('click', async () => {
-          await navigator.clipboard.writeText(text)
-          window.qikbar.toast({ title: 'Prompt copied', message: 'Paste it into your coding agent', style: 'success' })
+          try {
+            await navigator.clipboard.writeText(text)
+            window.qikbar.toast({ title: 'Prompt copied', message: 'Paste it into your coding agent', style: 'success' })
+          } catch {
+            window.qikbar.toast({ title: 'Copy failed', style: 'failure' })
+          }
         })
         embed.append(btn, pre)
       })
+      .catch(() => {})
   }
   document.querySelectorAll<HTMLButtonElement>('[data-copy-md]').forEach((b) =>
     b.addEventListener('click', async () => {
-      const md = await fetch(b.dataset.copyMd!).then((r) => r.text())
-      await navigator.clipboard.writeText(md)
-      window.qikbar.toast({ title: 'Copied page as Markdown', style: 'success' })
+      try {
+        const res = await fetch(b.dataset.copyMd!)
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        await navigator.clipboard.writeText(await res.text())
+        window.qikbar.toast({ title: 'Copied page as Markdown', style: 'success' })
+      } catch {
+        window.qikbar.toast({ title: 'Copy failed', style: 'failure' })
+      }
     }),
   )
   // Highlight the current TOC entry.

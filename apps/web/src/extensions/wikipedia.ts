@@ -9,9 +9,10 @@ interface Hit {
 }
 
 const strip = (html: string) => html.replace(/<[^>]+>/g, '').replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#039;/g, "'")
+const safeLang = (raw: unknown) => (typeof raw === 'string' && /^[a-z-]{2,12}$/i.test(raw.trim()) ? raw.trim().toLowerCase() : 'en')
 
-async function summary(title: string): Promise<string> {
-  const res = await fetch(`https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g, '_'))}`)
+async function summary(title: string, lang = 'en'): Promise<string> {
+  const res = await fetch(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title.replace(/ /g, '_'))}`)
   if (!res.ok) return `# ${title}\n\nNo summary available.`
   const s = await res.json()
   const image = s.thumbnail?.source ? `![${title}](${s.thumbnail.source})\n\n` : ''
@@ -41,10 +42,12 @@ export default defineExtension({
           emptyView: { title: 'Search Wikipedia', description: 'Start typing to search 6 million articles', icon: 'book' },
           items: async ({ query, signal }) => {
             if (query.trim().length < 2) return []
-            const url = `https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srlimit=20&srsearch=${encodeURIComponent(query)}`
-            const data = await fetch(url, { signal }).then((r) => r.json())
-            const lang = ctx.preferences.lang || 'en'
-            return (data.query?.search as Hit[]).map<Item>((h) => {
+            const lang = safeLang(ctx.preferences.lang)
+            const url = `https://${lang}.wikipedia.org/w/api.php?action=query&list=search&format=json&origin=*&srlimit=20&srsearch=${encodeURIComponent(query)}`
+            const res = await fetch(url, { signal })
+            if (!res.ok) throw new Error(`Wikipedia error ${res.status}`)
+            const data = await res.json()
+            return ((data.query?.search ?? []) as Hit[]).map<Item>((h) => {
               const href = `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(h.title.replace(/ /g, '_'))}`
               return {
                 id: String(h.pageid),
@@ -52,7 +55,7 @@ export default defineExtension({
                 subtitle: strip(h.snippet),
                 icon: 'book',
                 url: href,
-                detail: () => summary(h.title),
+                detail: () => summary(h.title, lang),
                 accessories: [{ text: `${h.wordcount.toLocaleString()} words` }],
                 actions: [
                   action.ask(`Explain the Wikipedia article “${h.title}” in simple terms, with the key facts.`, { title: 'Ask AI About This' }),

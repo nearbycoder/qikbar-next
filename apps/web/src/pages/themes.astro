@@ -234,8 +234,12 @@ const fonts = [
     }),
   )
   $('[data-copy-output]').addEventListener('click', async () => {
-    await navigator.clipboard.writeText(outputEl.textContent ?? '')
-    window.qikbar.toast({ title: 'Theme copied', style: 'success' })
+    try {
+      await navigator.clipboard.writeText(outputEl.textContent ?? '')
+      window.qikbar.toast({ title: 'Theme copied', style: 'success' })
+    } catch {
+      window.qikbar.toast({ title: 'Copy failed', style: 'failure' })
+    }
   })
 
   render()

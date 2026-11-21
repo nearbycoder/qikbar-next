@@ -1,7 +1,8 @@
 import type { Action, ChatView, DetailView, FormField, FormView, GridView, Item, ListView } from '../core/types.js'
 import type { Bar, Frame, Row } from './bar.js'
 import { copyText } from './nav.js'
-import { h, highlight, renderAccessory, renderIcon, renderKbd, renderTag } from './dom.js'
+import { h, highlight, isSafeUrl, renderAccessory, renderIcon, renderKbd, renderTag } from './dom.js'
+import { escapeHtml } from './markdown.js'
 
 export interface ViewRenderer {
   readonly frame: Frame
@@ -49,6 +50,7 @@ export class ListRenderer implements ViewRenderer {
   protected detailEl?: HTMLElement
   protected cache = new Map<string, { el: HTMLElement; sig: unknown }>()
   protected renderedKeys: string[] = []
+  protected lastRows?: Row[]
   protected selectedEl?: HTMLElement
   protected virtual = false
   protected offsets: number[] = []
@@ -97,22 +99,32 @@ export class ListRenderer implements ViewRenderer {
     this.cache.clear()
     this.inner.replaceChildren()
     this.renderedKeys = []
+    this.lastRows = undefined
     this.selectedEl = undefined
     this.update()
   }
 
   update() {
     const rows = this.frame.rows
+    if (rows === this.lastRows) {
+      this.updateSelection()
+      this.updateEmpty()
+      this.updateDetail()
+      return
+    }
+    this.lastRows = rows
     const wasVirtual = this.virtual
     this.virtual = rows.length > VIRTUAL_THRESHOLD
     if (this.virtual) {
       if (!wasVirtual) this.measure()
       let y = 0
-      this.offsets = rows.map((r) => {
-        const top = y
-        y += r.kind === 'section' ? this.sectionHeight : this.rowHeight
-        return top
-      })
+      const len = rows.length
+      const offsets = new Array<number>(len)
+      for (let i = 0; i < len; i++) {
+        offsets[i] = y
+        y += rows[i]!.kind === 'section' ? this.sectionHeight : this.rowHeight
+      }
+      this.offsets = offsets
       this.inner.style.height = `${y}px`
       this.renderWindow()
     } else {
@@ -120,13 +132,19 @@ export class ListRenderer implements ViewRenderer {
         this.inner.style.height = ''
         for (const { el } of this.cache.values()) el.style.cssText = ''
       }
-      const keys = rows.map((r) => r.key)
-      const els = rows.map((r) => this.rowEl(r))
+      const len = rows.length
+      const keys = new Array<string>(len)
+      const els = new Array<HTMLElement>(len)
+      for (let i = 0; i < len; i++) {
+        const r = rows[i]!
+        keys[i] = r.key
+        els[i] = this.rowEl(r)
+      }
       if (!sameKeys(keys, this.renderedKeys) || els.some((el, i) => this.inner.children[i] !== el)) {
         this.inner.replaceChildren(...els)
         this.renderedKeys = keys
       }
-      this.prune(new Set(keys))
+      if (this.cache.size >= 400) this.prune(new Set(keys))
     }
     this.updateSelection()
     this.updateEmpty()
@@ -532,6 +550,12 @@ export class GridRenderer extends ListRenderer {
   }
 
   override update() {
+    if (this.frame.rows === this.lastRows) {
+      this.updateSelection()
+      this.updateEmpty()
+      return
+    }
+    this.lastRows = this.frame.rows
     // Grids are not virtualized; cap rendering for huge result sets.
     const rows = this.frame.rows.slice(0, 600)
     const keys = rows.map((r) => r.key)
@@ -547,7 +571,7 @@ export class GridRenderer extends ListRenderer {
   protected override itemEl(row: Extract<Row, { kind: 'item' }>): HTMLElement {
     const { item } = row
     const media = h('div', { class: 'qb-cell-media' })
-    if (item.image) media.append(h('img', { src: item.image, alt: '', loading: 'lazy', decoding: 'async', draggable: 'false' }))
+    if (item.image && isSafeUrl(item.image, true)) media.append(h('img', { src: item.image, alt: '', loading: 'lazy', decoding: 'async', draggable: 'false' }))
     else {
       const icon = renderIcon(item.icon, 28)
       if (icon) media.append(icon)
@@ -615,7 +639,9 @@ export class DetailRenderer implements ViewRenderer {
                 { class: 'qb-meta-value' },
                 renderIcon(m.icon, 14),
                 m.tag ? renderTag(m.tag) : null,
-                m.href ? h('a', { href: m.href, target: /^https?:/.test(m.href) ? '_blank' : null, rel: 'noopener' }, m.value ?? m.href) : (m.value ?? null),
+                m.href && isSafeUrl(m.href)
+                  ? h('a', { href: m.href, target: /^https?:/.test(m.href) ? '_blank' : null, rel: 'noopener noreferrer' }, m.value ?? m.href)
+                  : (m.value ?? null),
               ),
             ),
           ),
@@ -642,7 +668,7 @@ export class DetailRenderer implements ViewRenderer {
     const stick = this.body.scrollTop + this.body.clientHeight >= this.body.scrollHeight - 24
     let html = this.bar.md(d.text)
     if (!d.done) html += '<span class="qb-caret"></span>'
-    if (d.error) html += `<p class="qb-msg-error">${d.error.replace(/</g, '&lt;')}</p>`
+    if (d.error) html += `<p class="qb-msg-error">${escapeHtml(d.error)}</p>`
     this.body.innerHTML = html
     if (stick && !d.done) this.body.scrollTop = this.body.scrollHeight
   }

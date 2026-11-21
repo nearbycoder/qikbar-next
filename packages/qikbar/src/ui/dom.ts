@@ -31,8 +31,46 @@ function append(el: Element, children: (Child | Child[])[]) {
   }
 }
 
-const URL_RE = /^(https?:|\/|\.\.?\/|data:image\/|blob:)/
+const URL_RE = /^(https?:|\/|\.\.?\/|data:image\/|blob:)/i
+const UNSAFE_SVG_TAG = /^(script|foreignobject|iframe|object|embed|style|animate|set|handler)$/i
+const UNSAFE_SVG_ATTR = /^(href|xlink:href|src|action|formaction)$/i
+const hasOwn = Object.prototype.hasOwnProperty
 const svgTemplates = new Map<string, Node>()
+
+/** True if `url` uses a safe protocol (blocks `javascript:`, `vbscript:`, unsafe `data:`, control-char bypasses). */
+export function isSafeUrl(url: string, allowDataImage = false): boolean {
+  const trimmed = url.trim()
+  // eslint-disable-next-line no-control-regex
+  if (!trimmed || /[\u0000-\u001f\u007f]/.test(trimmed)) return false
+  if (/^(https?:|mailto:|tel:|#|\/|\.\.?\/)/i.test(trimmed)) return true
+  if (allowDataImage && /^(data:image\/(png|jpe?g|gif|webp|avif|svg\+xml);|blob:)/i.test(trimmed)) return true
+  return !/^[a-z][a-z0-9+.-]*:/i.test(trimmed)
+}
+
+/** Parse inline SVG markup safely, stripping scriptable elements, event handlers and unsafe URLs. */
+export function sanitizeSvg(markup: string): Element | null {
+  const tpl = document.createElement('template')
+  tpl.innerHTML = markup
+  const svg = tpl.content.firstElementChild
+  if (!svg || svg.tagName.toLowerCase() !== 'svg') return null
+  for (const el of [svg, ...svg.querySelectorAll('*')]) {
+    if (UNSAFE_SVG_TAG.test(el.tagName)) {
+      el.remove()
+      continue
+    }
+    for (const attr of [...el.attributes]) {
+      const name = attr.name
+      if (
+        /^on/i.test(name) ||
+        // eslint-disable-next-line no-control-regex
+        (UNSAFE_SVG_ATTR.test(name) && /^(javascript|vbscript|data):/i.test(attr.value.replace(/[\u0000-\u0020\u007f]+/g, '')))
+      ) {
+        el.removeAttribute(name)
+      }
+    }
+  }
+  return svg
+}
 
 function cloneIconSvg(name: string, size: number): Node | null {
   const key = `${name}:${size}`
@@ -58,7 +96,7 @@ export function renderIcon(icon: Icon | undefined, size = 16): HTMLElement | nul
   } else if (typeof Node !== 'undefined' && icon instanceof Node) {
     wrap.append(icon.cloneNode(true))
   } else if (typeof icon === 'object' && 'url' in icon) {
-    wrap.append(h('img', { src: icon.url, alt: icon.alt ?? '', loading: 'lazy', decoding: 'async', draggable: 'false' }))
+    if (isSafeUrl(icon.url, true)) wrap.append(h('img', { src: icon.url, alt: icon.alt ?? '', loading: 'lazy', decoding: 'async', draggable: 'false' }))
   } else if (typeof icon === 'object' && 'color' in icon) {
     wrap.classList.add('qb-icon-tinted')
     wrap.style.setProperty('--qb-tint', colorValue(icon.color))
@@ -67,9 +105,12 @@ export function renderIcon(icon: Icon | undefined, size = 16): HTMLElement | nul
   } else if (typeof icon === 'string') {
     const node = cloneIconSvg(icon, size)
     if (node) wrap.append(node)
-    else if (icon.trimStart().startsWith('<svg')) wrap.innerHTML = icon
-    else if (URL_RE.test(icon)) wrap.append(h('img', { src: icon, alt: '', loading: 'lazy', decoding: 'async', draggable: 'false' }))
-    else {
+    else if (icon.trimStart().startsWith('<svg')) {
+      const svg = sanitizeSvg(icon)
+      if (svg) wrap.append(svg)
+    } else if (URL_RE.test(icon) && isSafeUrl(icon, true)) {
+      wrap.append(h('img', { src: icon, alt: '', loading: 'lazy', decoding: 'async', draggable: 'false' }))
+    } else {
       wrap.classList.add('qb-icon-text')
       wrap.textContent = icon
     }
@@ -122,7 +163,7 @@ const NAMED_COLORS: Record<string, string> = {
 
 export function colorValue(color: Color | undefined): string {
   if (!color) return NAMED_COLORS.default!
-  return NAMED_COLORS[color] ?? color
+  return hasOwn.call(NAMED_COLORS, color) ? NAMED_COLORS[color]! : color
 }
 
 export function renderTag(tag: string | { value: string; color?: Color }): HTMLElement {
@@ -137,6 +178,7 @@ const rtf = typeof Intl !== 'undefined' && 'RelativeTimeFormat' in Intl ? new In
 
 export function relativeTime(date: Date | number | string): string {
   const d = new Date(date)
+  if (!Number.isFinite(d.getTime())) return ''
   const diff = (d.getTime() - Date.now()) / 1000
   const abs = Math.abs(diff)
   if (!rtf) return d.toLocaleDateString()
@@ -154,7 +196,10 @@ export function renderAccessory(acc: Accessory): HTMLElement {
   if (icon) el.append(icon)
   if (acc.tag) el.append(renderTag(acc.tag))
   if (acc.text) el.append(h('span', null, acc.text))
-  if (acc.date != null) el.append(h('time', { datetime: new Date(acc.date).toISOString() }, relativeTime(acc.date)))
+  if (acc.date != null) {
+    const d = new Date(acc.date)
+    if (Number.isFinite(d.getTime())) el.append(h('time', { datetime: d.toISOString() }, relativeTime(d)))
+  }
   if (acc.kbd) el.append(renderKbd(acc.kbd))
   return el
 }

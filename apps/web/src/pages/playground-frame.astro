@@ -1,0 +1,87 @@
+---
+import '../styles/global.css'
+---
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Qikbar Playground Sandbox</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        overflow-x: hidden;
+      }
+      #pg-bar {
+        min-height: 480px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="pg-bar"></div>
+    <script>
+      import * as Q from '@qikbar/qikbar'
+      import * as extensions from '@qikbar/qikbar/extensions'
+      import { demoAI } from '../scripts/demo-ai'
+
+      const root = document.getElementById('pg-bar')!
+      const scope = { ...Q, extensions, demoAI }
+      let bar: Q.QikbarInstance | undefined
+
+      const notify = (msg: Record<string, unknown>) => {
+        if (window.parent && window.parent !== window) window.parent.postMessage(msg, '*')
+      }
+
+      const sendHeight = () => {
+        const h = Math.max(480, Math.ceil(root.getBoundingClientRect().height) + 4)
+        notify({ type: 'height', height: h })
+      }
+
+      if (typeof ResizeObserver !== 'undefined') {
+        new ResizeObserver(sendHeight).observe(root)
+      }
+
+      window.addEventListener('message', (e: MessageEvent) => {
+        if (e.source !== window.parent) return
+        const data = e.data
+        if (!data || typeof data !== 'object') return
+        if (data.type === 'theme') {
+          const dark = !!data.dark
+          document.documentElement.classList.toggle('dark', dark)
+          document.documentElement.classList.toggle('light', !dark)
+          document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
+          return
+        }
+        if (data.type === 'run' && typeof data.code === 'string') {
+          let config: Q.QikbarConfig
+          try {
+            // Executed inside a sandboxed iframe without allow-same-origin, isolated from qikbar.com storage and DOM.
+            // eslint-disable-next-line no-new-func
+            config = new Function(...Object.keys(scope), data.code)(...Object.values(scope)) ?? {}
+          } catch (err) {
+            notify({ type: 'error', message: String(err instanceof Error ? err.message : err) })
+            return
+          }
+          notify({ type: 'error', message: '' })
+          bar?.destroy()
+          root.replaceChildren()
+          bar = Q.createQikbar({
+            ...config,
+            inline: '#pg-bar',
+            hotkey: false,
+            shortcuts: false,
+            storage: Q.memoryStorage(),
+            namespace: 'qikbar-playground',
+          })
+          requestAnimationFrame(sendHeight)
+        }
+      })
+
+      notify({ type: 'ready' })
+    </script>
+  </body>
+</html>
