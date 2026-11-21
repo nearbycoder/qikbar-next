@@ -32,6 +32,23 @@ function append(el: Element, children: (Child | Child[])[]) {
 }
 
 const URL_RE = /^(https?:|\/|\.\.?\/|data:image\/|blob:)/
+const svgTemplates = new Map<string, Node>()
+
+function cloneIconSvg(name: string, size: number): Node | null {
+  const key = `${name}:${size}`
+  let tpl = svgTemplates.get(key)
+  if (!tpl || tpl.ownerDocument !== document) {
+    const svg = iconSvg(name, size)
+    if (!svg) return null
+    const host = document.createElement('span')
+    host.innerHTML = svg
+    const node = host.firstChild
+    if (!node) return null
+    tpl = node
+    svgTemplates.set(key, tpl)
+  }
+  return tpl.cloneNode(true)
+}
 
 export function renderIcon(icon: Icon | undefined, size = 16): HTMLElement | null {
   if (icon == null || icon === '') return null
@@ -48,8 +65,8 @@ export function renderIcon(icon: Icon | undefined, size = 16): HTMLElement | nul
     const inner = renderIcon(icon.icon ?? 'dot', size)
     if (inner) wrap.append(...inner.childNodes)
   } else if (typeof icon === 'string') {
-    const svg = iconSvg(icon, size)
-    if (svg) wrap.innerHTML = svg
+    const node = cloneIconSvg(icon, size)
+    if (node) wrap.append(node)
     else if (icon.trimStart().startsWith('<svg')) wrap.innerHTML = icon
     else if (URL_RE.test(icon)) wrap.append(h('img', { src: icon, alt: '', loading: 'lazy', decoding: 'async', draggable: 'false' }))
     else {

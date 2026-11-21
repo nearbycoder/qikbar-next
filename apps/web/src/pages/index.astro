@@ -182,7 +182,7 @@ const faqs = [
 ]
 
 import { catalog } from '../data/extensions'
-const gallery = catalog.map((c) => ({ title: c.extension.title, icon: c.extension.icon as string, desc: c.extension.description ?? '', try: c.try }))
+const gallery = catalog.map((c) => ({ name: c.extension.name, title: c.extension.title, icon: c.extension.icon as string, desc: c.extension.description ?? '', try: c.try }))
 ---
 
 <Base>
@@ -360,7 +360,7 @@ const gallery = catalog.map((c) => ({ title: c.extension.title, icon: c.extensio
       <p class="section-lead">An extension bundles commands, live sources, AI tools and user preferences. If preferences are missing, Qikbar asks for them the first time and stores them. It works in any app that uses Qikbar.</p>
       <div class="ext-grid">
         {gallery.slice(0, 8).map((g) => (
-          <button type="button" class="ext" data-gallery-try={g.try}>
+          <button type="button" class="ext" data-gallery-try={g.try} data-gallery-ext={g.name}>
             <ExtIcon class="ext-ic" icon={g.icon} size={16} />
             <div><strong>{g.title}</strong><span>{g.desc.split('.')[0]}</span></div>
           </button>
@@ -454,9 +454,6 @@ const gallery = catalog.map((c) => ({ title: c.extension.title, icon: c.extensio
   import { calculator } from '@qikbar/qikbar/extensions'
   import { demoCommands, projectSource } from '../scripts/demo-data'
   import { demoAI } from '../scripts/demo-ai'
-  import { catalog } from '../data/extensions'
-
-  const catalogNames = catalog.slice(0, 8).map((c) => c.extension.name)
 
   const film = document.getElementById('film')!
   const filmVideo = document.getElementById('film-video') as HTMLVideoElement
@@ -488,23 +485,40 @@ const gallery = catalog.map((c) => ({ title: c.extension.title, icon: c.extensio
     ai: { provider: demoAI, suggestions: ['Open Billing v2', 'Go to settings', 'What can you do?'] },
   })
 
-  const aiBar = createQikbar({
-    inline: '#ai-bar',
-    hotkey: false,
-    shortcuts: false,
-    namespace: 'qikbar-ai',
-    commands: demoCommands,
-    sources: [projectSource],
-    ai: { provider: demoAI, suggestions: ['Open Billing v2', 'Go to settings', 'What can you do?'] },
-    theme: { vars: { listHeight: '340px' } },
-  })
+  // Mount the below-the-fold AI demo bar lazily when it nears the viewport (or on button click).
+  let aiBar: QikbarInstance | undefined
+  const ensureAiBar = (): QikbarInstance =>
+    (aiBar ??= createQikbar({
+      inline: '#ai-bar',
+      hotkey: false,
+      shortcuts: false,
+      namespace: 'qikbar-ai',
+      commands: demoCommands,
+      sources: [projectSource],
+      ai: { provider: demoAI, suggestions: ['Open Billing v2', 'Go to settings', 'What can you do?'] },
+      theme: { vars: { listHeight: '340px' } },
+    }))
+  const aiEl = document.getElementById('ai-bar')
+  if (aiEl) {
+    const aiIo = new IntersectionObserver(
+      (entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return
+        aiIo.disconnect()
+        ensureAiBar()
+      },
+      { rootMargin: '400px 0px' },
+    )
+    aiIo.observe(aiEl)
+  }
 
+  let typingTimer: ReturnType<typeof setTimeout> | undefined
   const typeInto = (bar: QikbarInstance, text: string) => {
+    clearTimeout(typingTimer)
     bar.open()
     let i = 0
     const step = () => {
       bar.setQuery(text.slice(0, ++i))
-      if (i < text.length) setTimeout(step, 28)
+      if (i < text.length) typingTimer = setTimeout(step, 28)
     }
     step()
   }
@@ -517,22 +531,24 @@ const gallery = catalog.map((c) => ({ title: c.extension.title, icon: c.extensio
   )
   document.querySelectorAll<HTMLButtonElement>('[data-ask]').forEach((b) =>
     b.addEventListener('click', () => {
+      clearTimeout(typingTimer)
       hero.close()
       hero.ask(b.dataset.ask!)
     }),
   )
   document.querySelectorAll<HTMLButtonElement>('[data-ai]').forEach((b) =>
     b.addEventListener('click', () => {
-      aiBar.close()
-      aiBar.ask(b.dataset.ai!)
+      const bar = ensureAiBar()
+      bar.close()
+      bar.ask(b.dataset.ai!)
     }),
   )
 
   // Gallery tiles: install into the site bar and try.
   document.querySelectorAll<HTMLButtonElement>('[data-gallery-try]').forEach((b) =>
-    b.addEventListener('click', () => {
-      const name = catalogNames[[...document.querySelectorAll('[data-gallery-try]')].indexOf(b)]
-      if (name) window.qikbarSetInstalled(name, true)
+    b.addEventListener('click', async () => {
+      const name = b.dataset.galleryExt
+      if (name) await window.qikbarSetInstalled(name, true)
       window.qikbar.open({ query: b.dataset.galleryTry })
     }),
   )
@@ -574,7 +590,8 @@ const gallery = catalog.map((c) => ({ title: c.extension.title, icon: c.extensio
     }),
   )
   document.querySelector('[data-copy-prompt]')?.addEventListener('click', async () => {
-    const text = await fetch('/prompt.txt').then((r) => r.text())
+    const inlinePrompt = document.querySelector('.prompt-text code')?.textContent
+    const text = typeof inlinePrompt === 'string' && inlinePrompt ? inlinePrompt : await fetch('/prompt.txt').then((r) => r.text())
     await navigator.clipboard.writeText(text)
     window.qikbar.toast({ title: 'Prompt copied', message: 'Paste it into your coding agent', style: 'success' })
   })

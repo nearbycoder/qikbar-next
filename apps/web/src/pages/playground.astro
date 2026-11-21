@@ -63,8 +63,18 @@ import { examples } from '../data/playground'
     bar = Q.createQikbar({ ...config, inline: '#pg-bar', hotkey: false, shortcuts: false, namespace: 'qikbar-playground' })
   }
 
-  const encode = (s: string) => btoa(unescape(encodeURIComponent(s)))
-  const decode = (s: string) => decodeURIComponent(escape(atob(s)))
+  const encode = (s: string) => {
+    const bytes = new TextEncoder().encode(s)
+    let bin = ''
+    for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]!)
+    return btoa(bin)
+  }
+  const decode = (s: string) => {
+    const bin = atob(s)
+    const bytes = new Uint8Array(bin.length)
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+    return new TextDecoder().decode(bytes)
+  }
 
   function load(i: number) {
     tabs.forEach((t, j) => t.setAttribute('aria-selected', String(i === j)))

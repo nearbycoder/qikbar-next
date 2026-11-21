@@ -58,8 +58,14 @@ export class LazyQikbar implements QikbarInstance {
     })
     // Warm up when the browser is idle so the first open is instant.
     const idle = (globalThis as any).requestIdleCallback as ((cb: () => void, o?: { timeout: number }) => number) | undefined
-    if (idle) idle(() => void this.load(), { timeout: 2500 })
-    else setTimeout(() => void this.load(), 1200)
+    const cancelIdle = (globalThis as any).cancelIdleCallback as ((id: number) => void) | undefined
+    if (idle) {
+      const id = idle(() => void this.load(), { timeout: 2500 })
+      this.teardown.push(() => cancelIdle?.(id))
+    } else {
+      const id = setTimeout(() => void this.load(), 1200)
+      this.teardown.push(() => clearTimeout(id))
+    }
   }
 
   private launcherToken = 0
@@ -105,20 +111,24 @@ export class LazyQikbar implements QikbarInstance {
   }
 
   private load(): Promise<Bar> {
-    this.loading ??= this.loader().then(({ Bar }) => {
-      if (this.destroyed) throw new Error('destroyed')
-      for (const fn of this.teardown) fn()
-      this.teardown = []
-      const bar = new Bar(this.config)
-      this.bar = bar
-      const queue = this.queue
-      this.queue = []
-      for (const fn of queue) fn(bar)
-      return bar
-    })
-    this.loading.catch((err) => {
-      if (!this.destroyed) console.error('[qikbar] failed to load UI', err)
-    })
+    if (!this.loading) {
+      const p = this.loader().then(({ Bar }) => {
+        if (this.destroyed) throw new Error('destroyed')
+        for (const fn of this.teardown) fn()
+        this.teardown = []
+        const bar = new Bar(this.config)
+        this.bar = bar
+        const queue = this.queue
+        this.queue = []
+        for (const fn of queue) fn(bar)
+        return bar
+      })
+      this.loading = p
+      p.catch((err) => {
+        if (this.loading === p) this.loading = undefined
+        if (!this.destroyed) console.error('[qikbar] failed to load UI', err)
+      })
+    }
     return this.loading
   }
 

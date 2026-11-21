@@ -35,18 +35,19 @@ export class Frecency {
   }
 
   /** A score in [0, 1). */
-  score(id: string): number {
+  score(id: string, now = Date.now()): number {
     const e = this.entries[id]
     if (!e) return 0
-    const decay = Math.pow(0.5, (Date.now() - e.t) / HALF_LIFE)
+    const decay = Math.pow(0.5, (now - e.t) / HALF_LIFE)
     const raw = Math.log2(1 + e.c) * decay
     return raw / (1 + raw)
   }
 
   /** Ids sorted by score, best first. */
   top(limit: number): string[] {
+    const now = Date.now()
     return Object.keys(this.entries)
-      .map((id) => [id, this.score(id)] as const)
+      .map((id) => [id, this.score(id, now)] as const)
       .filter(([, s]) => s > 0.02)
       .sort((a, b) => b[1] - a[1])
       .slice(0, limit)

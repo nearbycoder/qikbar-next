@@ -280,7 +280,7 @@ describe('bar', () => {
     expect(t.$('.qb-hud')?.textContent).toContain('Hello')
   })
 
-  it('virtualizes long lists', async () => {
+  it('virtualizes long lists and bounds DOM cache on scroll', async () => {
     const items = Array.from({ length: 5000 }, (_, i) => ({ title: `Item ${i}` }))
     const t = make({ commands: [{ title: 'Big list', view: list({ title: 'Big', items }) }] })
     t.bar.open()
@@ -290,6 +290,13 @@ describe('bar', () => {
     expect(t.$$('.qb-item').length).toBeLessThan(100)
     await t.press('ArrowDown', { ctrlKey: true })
     expect(t.selected()).toBe('Item 4999')
+    // Scroll across many positions and ensure the internal DOM cache stays bounded.
+    const scroller = t.$('.qb-scroll')!
+    for (let pos = 0; pos <= 50000; pos += 5000) {
+      scroller.scrollTop = pos
+      ;(t.bar as any).renderer.restoreScroll(pos)
+    }
+    expect((t.bar as any).renderer.cache.size).toBeLessThan(250)
     await t.type('item 42')
     expect(t.titles()[0]).toBe('Item 42')
   })
@@ -303,6 +310,16 @@ describe('config sources', () => {
     await tick(5)
     await settle()
     expect(t.titles()).toContain('Doc intro')
+  })
+
+  it('searches newly added sources when a query is already active', async () => {
+    const t = make({ commands: [{ title: 'Home' }] })
+    t.bar.open()
+    await t.type('weather')
+    t.bar.addSource({ id: 'dyn', title: 'Live', debounce: 0, search: ({ query }) => [{ title: `Live ${query}` }] })
+    await tick(10)
+    await settle()
+    expect(t.titles()).toContain('Live weather')
   })
 })
 

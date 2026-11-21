@@ -64,7 +64,7 @@ export interface ExtRuntime {
 
 export type Row =
   | { kind: 'section'; key: string; title: string }
-  | { kind: 'item'; key: string; item: Item; positions?: number[]; index: number }
+  | { kind: 'item'; key: string; item: Item; positions?: number[]; index: number; rowIndex: number }
 
 export interface ChatTurn {
   role: 'user' | 'assistant'
@@ -135,6 +135,9 @@ interface PanelState {
   el?: HTMLElement
   input?: HTMLInputElement
   list?: HTMLElement
+  filterRendered?: string
+  actionEls?: HTMLElement[]
+  selectedEl?: HTMLElement
 }
 
 const VIEW_TYPES = new Set(['list', 'grid', 'detail', 'form', 'chat'])
@@ -167,9 +170,20 @@ export class Bar implements QikbarInstance {
   stack: Frame[] = []
   private _open = false
   private rootCache: Item[] | null = null
+  private rootItemSet: Set<Item> | null = null
+  private rootById: Map<string, Item> | null = null
+  private pinList: string[] = []
+  private pinSet = new Set<string>()
+  private aliasMap: Record<string, string> = {}
+  private aliasById = new Map<string, string>()
   private routeItems: Item[] = []
   private autoItems: Item[] = []
   private shortcutItems: Item[] = []
+  private crumbSig: string | null = null
+  private footerLeftSig: string | null = null
+  private footerRightSig: string | null = null
+  private footerPrimaryRun?: () => void
+  private themeSig: string | null = null
   aiOptions?: AIOptions
   ai: AIClient | undefined
   dom?: Dom
@@ -198,6 +212,7 @@ export class Bar implements QikbarInstance {
     this.storageAdapter = config.storage ?? defaultStorage()
     this.storage = scopedStorage(this.storageAdapter, config.namespace ?? 'qikbar')
     this.frecency = new Frecency(this.storage)
+    this.syncPersonalization()
     this.applyConfig(config, true)
     if (typeof document === 'undefined') return
     this.listen(document, 'keydown', this.onGlobalKeyDown as EventListener, true)
@@ -293,8 +308,9 @@ export class Bar implements QikbarInstance {
     if (!wasOpen) {
       this._open = true
       this.prevFocus = document.activeElement
-      // Re-evaluate `when` conditions and page links on every open.
-      this.rootCache = null
+      // Re-evaluate `when` conditions, personalization and page links on every open.
+      this.syncPersonalization()
+      this.clearRootCache()
       this.autoIndex()
       this.resetToRoot()
       this.applyTheme()
@@ -373,6 +389,9 @@ export class Bar implements QikbarInstance {
 
   addSource(source: Source): () => void {
     this.sources.add(source)
+    if (this._open && this.top?.view.type === 'root' && this.top.query.trim()) {
+      this.searchSources(this.top)
+    }
     return () => {
       this.sources.delete(source)
       for (const f of this.stack) f.sourceResults?.delete(source.id)
@@ -496,39 +515,62 @@ export class Bar implements QikbarInstance {
 
   // ─── Pins & aliases ──────────────────────────────────────────────────────
 
+  private syncPersonalization() {
+    this.pinList = this.storage.get<string[]>('pins') ?? []
+    this.pinSet = new Set(this.pinList)
+    this.aliasMap = this.storage.get<Record<string, string>>('aliases') ?? {}
+    this.aliasById = new Map()
+    for (const [alias, target] of Object.entries(this.aliasMap)) this.aliasById.set(target, alias)
+  }
+
   get personalize() {
     return this.config.personalize !== false
   }
 
-  pins(): string[] {
-    return this.storage.get<string[]>('pins') ?? []
+  isPinned(id: string): boolean {
+    return this.pinSet.has(id)
   }
 
-  pin(id: string, pinned = !this.pins().includes(id)) {
-    const list = this.pins().filter((x) => x !== id)
+  pins(): string[] {
+    return [...this.pinList]
+  }
+
+  pin(id: string, pinned = !this.pinSet.has(id)) {
+    const list = this.pinList.filter((x) => x !== id)
     if (pinned) list.unshift(id)
+    this.pinList = list
+    this.pinSet = new Set(list)
     this.storage.set('pins', list)
-    const item = this.rootItems().find((i) => this.idOf(i) === id)
+    const item = this.rootItemById(id)
     if (item) this.track({ type: pinned ? 'pin' : 'unpin', item: this.eventItem(item) })
     this.invalidateRoot()
   }
 
   aliases(): Record<string, string> {
-    return this.storage.get<Record<string, string>>('aliases') ?? {}
+    return { ...this.aliasMap }
   }
 
   aliasOf(id: string): string | undefined {
-    for (const [alias, target] of Object.entries(this.aliases())) if (target === id) return alias
-    return undefined
+    return this.aliasById.get(id)
   }
 
   setAlias(id: string, alias: string | null) {
-    const map = { ...this.aliases() }
-    for (const [k, v] of Object.entries(map)) if (v === id) delete map[k]
+    const map = { ...this.aliasMap }
+    const prev = this.aliasById.get(id)
+    if (prev !== undefined) {
+      delete map[prev]
+      this.aliasById.delete(id)
+    }
     const clean = alias == null ? '' : normalizeAlias(alias)
-    if (clean) map[clean] = id
+    if (clean) {
+      const displaced = map[clean]
+      if (displaced !== undefined) this.aliasById.delete(displaced)
+      map[clean] = id
+      this.aliasById.set(id, clean)
+    }
+    this.aliasMap = map
     this.storage.set('aliases', map)
-    const item = this.rootItems().find((i) => this.idOf(i) === id)
+    const item = this.rootItemById(id)
     if (item) this.track({ type: 'alias', item: this.eventItem(item), alias: clean || null })
     this.invalidateRoot()
   }
@@ -537,7 +579,7 @@ export class Bar implements QikbarInstance {
   private personalizable(item: Item, frame: Frame) {
     if (!this.personalize || frame.view.type !== 'root' || isFallback(item)) return false
     const id = this.idOf(item)
-    return !id.startsWith('qikbar.') && this.rootItems().includes(item)
+    return !id.startsWith('qikbar.') && this.hasRootItem(item)
   }
 
   private aliasForm(item: Item): FormView {
@@ -557,9 +599,9 @@ export class Bar implements QikbarInstance {
           defaultValue: current ?? '',
           validate: (value) => {
             const alias = normalizeAlias(String(value ?? ''))
-            const owner = this.aliases()[alias]
+            const owner = this.aliasMap[alias]
             if (owner && owner !== id) {
-              const other = this.rootItems().find((i) => this.idOf(i) === owner)
+              const other = this.rootItemById(owner)
               return this.t('aliasTaken', { alias, title: other?.title ?? owner })
             }
           },
@@ -720,8 +762,24 @@ export class Bar implements QikbarInstance {
     return item.id ?? this.ids.get(item) ?? item.title
   }
 
-  private invalidateRoot() {
+  private clearRootCache() {
     this.rootCache = null
+    this.rootItemSet = null
+    this.rootById = null
+  }
+
+  private hasRootItem(item: Item): boolean {
+    this.rootItems()
+    return this.rootItemSet!.has(item)
+  }
+
+  private rootItemById(id: string): Item | undefined {
+    this.rootItems()
+    return this.rootById!.get(id)
+  }
+
+  private invalidateRoot() {
+    this.clearRootCache()
     if (this._open) {
       for (const f of this.stack) {
         f.actionCache = undefined
@@ -735,7 +793,8 @@ export class Bar implements QikbarInstance {
   rootItems(): Item[] {
     if (this.rootCache) return this.rootCache
     const out: Item[] = []
-    const seen = new Set<string>()
+    const itemSet = new Set<Item>()
+    const byId = new Map<string, Item>()
     const add = (item: Item, prefix: string) => {
       try {
         if (item.when && !item.when()) return
@@ -743,8 +802,9 @@ export class Bar implements QikbarInstance {
         return
       }
       let id = item.id ?? `${prefix}:${item.section ?? ''}:${item.title}`
-      while (seen.has(id)) id += '\''
-      seen.add(id)
+      while (byId.has(id)) id += '\''
+      byId.set(id, item)
+      itemSet.add(item)
       this.ids.set(item, id)
       out.push(item)
     }
@@ -769,6 +829,8 @@ export class Bar implements QikbarInstance {
       )
     }
     this.rootCache = out
+    this.rootItemSet = itemSet
+    this.rootById = byId
     this.shortcutItems = out.filter((i) => i.shortcut)
     return out
   }
@@ -778,7 +840,7 @@ export class Bar implements QikbarInstance {
     if (!opt || typeof document === 'undefined') {
       if (this.autoItems.length) {
         this.autoItems = []
-        this.rootCache = null
+        this.clearRootCache()
       }
       return
     }
@@ -829,7 +891,7 @@ export class Bar implements QikbarInstance {
       }
     }
     this.autoItems = items
-    this.rootCache = null
+    this.clearRootCache()
   }
 
   // ─── Frames ──────────────────────────────────────────────────────────────
@@ -923,7 +985,7 @@ export class Bar implements QikbarInstance {
         let key = v.type === 'root' ? this.idOf(e.item) : (e.item.id ?? `${g.title}:${e.item.title}`)
         while (keys.has(key)) key += '\''
         keys.add(key)
-        const row = { kind: 'item' as const, key, item: e.item, positions: e.positions, index: itemRows.length }
+        const row = { kind: 'item' as const, key, item: e.item, positions: e.positions, index: itemRows.length, rowIndex: rows.length }
         rows.push(row)
         itemRows.push(row)
       }
@@ -958,13 +1020,11 @@ export class Bar implements QikbarInstance {
       return g
     }
 
-    const byId = () => new Map(items.map((i) => [this.idOf(i), i]))
     if (!q) {
       const shown = new Set<Item>()
       if (this.personalize) {
-        const map = byId()
-        for (const id of this.pins()) {
-          const item = map.get(id)
+        for (const id of this.pinList) {
+          const item = this.rootItemById(id)
           if (!item || shown.has(item)) continue
           group(this.t('pinned')).entries.push({ item })
           shown.add(item)
@@ -972,10 +1032,9 @@ export class Bar implements QikbarInstance {
       }
       const recentsLimit = this.config.recents === false ? 0 : typeof this.config.recents === 'number' ? this.config.recents : 4
       if (recentsLimit) {
-        const map = byId()
         let added = 0
         for (const id of this.frecency.top(recentsLimit * 2 + shown.size)) {
-          const item = map.get(id)
+          const item = this.rootItemById(id)
           if (!item || item.searchOnly || shown.has(item)) continue
           group(this.t('recent')).entries.push({ item })
           shown.add(item)
@@ -1000,15 +1059,16 @@ export class Bar implements QikbarInstance {
       }
     }
     // An exact alias jumps straight to its item.
-    const aliased = this.personalize ? this.aliases()[normalizeAlias(q)] : undefined
-    const aliasItem = aliased ? byId().get(aliased) : undefined
+    const aliased = this.personalize ? this.aliasMap[normalizeAlias(q)] : undefined
+    const aliasItem = aliased ? this.rootItemById(aliased) : undefined
     if (aliasItem) group(aliasItem.section ?? this.t('commands')).entries.push({ item: aliasItem })
     addSources('top')
-    const pins = this.personalize ? new Set(this.pins()) : undefined
+    const pins = this.personalize ? this.pinSet : undefined
+    const now = Date.now()
     const ranked = rank(items, q, {
       boost: (i) => {
         const id = this.idOf(i)
-        return this.frecency.score(id) * 0.3 + (pins?.has(id) ? 0.15 : 0)
+        return this.frecency.score(id, now) * 0.3 + (pins?.has(id) ? 0.15 : 0)
       },
       limit: 300,
     })
@@ -1145,7 +1205,7 @@ export class Bar implements QikbarInstance {
       try {
         const candidates = this.rootItems().filter((i) => !this.idOf(i).startsWith('qikbar.'))
         if (opt.sources) for (const list of frame.sourceResults?.values() ?? []) candidates.push(...list)
-        const keyOf = (i: Item) => (this.rootItems().includes(i) ? this.idOf(i) : `src:${i.id ?? i.title}`)
+        const keyOf = (i: Item) => (this.hasRootItem(i) ? this.idOf(i) : `src:${i.id ?? i.title}`)
         const missing = candidates.filter((i) => this.vectors.get(keyOf(i))?.text !== embedText(i))
         for (let i = 0; i < missing.length; i += 128) {
           const batch = missing.slice(i, i + 128)
@@ -1365,7 +1425,7 @@ export class Bar implements QikbarInstance {
     }
     if (this.personalizable(item, frame)) {
       const id = this.idOf(item)
-      const pinned = this.pins().includes(id)
+      const pinned = this.isPinned(id)
       const alias = this.aliasOf(id)
       acts.push({
         title: pinned ? this.t('unpin') : this.t('pin'),
@@ -1757,7 +1817,7 @@ export class Bar implements QikbarInstance {
     )
     const all = [...local.map((item) => ({ item, section: item.section ?? 'Commands' })), ...remote.flat()]
     return all.map(({ item, section }, n) => {
-      const id = this.rootItems().includes(item) ? this.idOf(item) : item.id && !found.has(item.id) ? item.id : `${section}#${n}`
+      const id = this.hasRootItem(item) ? this.idOf(item) : item.id && !found.has(item.id) ? item.id : `${section}#${n}`
       found.set(id, item)
       return { id, title: item.title, subtitle: item.subtitle, section, description: item.description, href: item.href ?? item.url }
     })
@@ -1765,7 +1825,7 @@ export class Bar implements QikbarInstance {
 
   private async agentTools(chatFrame: Frame, signal?: AbortSignal): Promise<RuntimeTool[]> {
     const found = new Map<string, Item>()
-    const lookup = (id: string) => found.get(id) ?? this.rootItems().find((i) => this.idOf(i) === id)
+    const lookup = (id: string) => found.get(id) ?? this.rootItemById(id)
     const tools: RuntimeTool[] = [
       {
         definition: {
@@ -2182,38 +2242,51 @@ export class Bar implements QikbarInstance {
     }
     const list = this.panelActions()
     p.selected = Math.min(p.selected, Math.max(0, list.length - 1))
-    const children: HTMLElement[] = []
-    let section: string | undefined
-    list.forEach((act, i) => {
-      if (!p.filter && act.section && act.section !== section) children.push(h('div', { class: 'qb-section' }, act.section))
-      section = act.section
-      const shortcut = act.shortcut ?? (i === 0 && !p.filter ? 'enter' : i === 1 && !p.filter ? 'mod+enter' : undefined)
-      const el = h(
-        'div',
-        {
-          class: 'qb-action',
-          role: 'option',
-          id: `${this.instanceId}-action-${i}`,
-          'aria-selected': i === p.selected ? 'true' : 'false',
-          'data-style': act.style ?? 'default',
-          onClick: () => this.runFromPanel(act),
-          onPointermove: () => {
-            if (p.selected !== i) {
-              p.selected = i
-              this.renderPanel()
-            }
+    if (!p.actionEls || p.filterRendered !== p.filter) {
+      p.filterRendered = p.filter
+      const children: HTMLElement[] = []
+      const actionEls: HTMLElement[] = []
+      let section: string | undefined
+      list.forEach((act, i) => {
+        if (!p.filter && act.section && act.section !== section) children.push(h('div', { class: 'qb-section' }, act.section))
+        section = act.section
+        const shortcut = act.shortcut ?? (i === 0 && !p.filter ? 'enter' : i === 1 && !p.filter ? 'mod+enter' : undefined)
+        const el = h(
+          'div',
+          {
+            class: 'qb-action',
+            role: 'option',
+            id: `${this.instanceId}-action-${i}`,
+            'aria-selected': 'false',
+            'data-style': act.style ?? 'default',
+            onClick: () => this.runFromPanel(act),
+            onPointermove: () => {
+              if (p.selected !== i) {
+                p.selected = i
+                this.renderPanel()
+              }
+            },
           },
-        },
-        renderIcon(act.icon ?? 'dot', 15),
-        h('span', { class: 'qb-action-title' }, this.actionTitle(act)),
-        shortcut ? renderKbd(shortcut) : null,
-      )
-      children.push(el)
-    })
-    if (!list.length) children.push(h('div', { class: 'qb-empty-desc', style: 'padding:10px 8px' }, this.t('noMatchingActions')))
-    p.list!.replaceChildren(...children)
+          renderIcon(act.icon ?? 'dot', 15),
+          h('span', { class: 'qb-action-title' }, this.actionTitle(act)),
+          shortcut ? renderKbd(shortcut) : null,
+        )
+        children.push(el)
+        actionEls.push(el)
+      })
+      if (!list.length) children.push(h('div', { class: 'qb-empty-desc', style: 'padding:10px 8px' }, this.t('noMatchingActions')))
+      p.list!.replaceChildren(...children)
+      p.actionEls = actionEls
+      p.selectedEl = undefined
+    }
+    const nextEl = p.actionEls[p.selected]
+    if (p.selectedEl && p.selectedEl !== nextEl) p.selectedEl.setAttribute('aria-selected', 'false')
+    if (nextEl) {
+      nextEl.setAttribute('aria-selected', 'true')
+      nextEl.scrollIntoView({ block: 'nearest' })
+    }
+    p.selectedEl = nextEl
     p.input!.setAttribute('aria-activedescendant', `${this.instanceId}-action-${p.selected}`)
-    p.list!.querySelector('[aria-selected=true]')?.scrollIntoView({ block: 'nearest' })
   }
 
   // ─── DOM ─────────────────────────────────────────────────────────────────
@@ -2382,13 +2455,22 @@ export class Bar implements QikbarInstance {
     const root = this.dom?.root
     if (!root) return
     const { vars, appearance } = resolveThemeVars(this.config.theme, this.resolveAppearance())
-    root.dataset.qbAppearance = appearance
     const preset = typeof this.config.theme === 'string' ? this.config.theme : this.config.theme?.preset
+    const entries = Object.entries(vars)
+    let sig = `${appearance}|${preset ?? ''}`
+    for (let i = 0; i < entries.length; i++) {
+      const [k, v] = entries[i]!
+      if (v != null && v !== '') sig += `|${k}=${v}`
+    }
+    if (sig === this.themeSig) return
+    this.themeSig = sig
+    root.dataset.qbAppearance = appearance
     if (preset) root.dataset.qbTheme = preset
     else delete root.dataset.qbTheme
     for (const name of this.appliedVars) root.style.removeProperty(name)
     this.appliedVars = []
-    for (const [k, v] of Object.entries(vars)) {
+    for (let i = 0; i < entries.length; i++) {
+      const [k, v] = entries[i]!
       if (v == null || v === '') continue
       const name = cssVarName(k)
       root.style.setProperty(name, v)
@@ -2487,7 +2569,14 @@ export class Bar implements QikbarInstance {
     const crumbTitle = depth > 1 ? ((v as View).title ?? (v.type === 'chat' ? this.aiName : undefined)) : undefined
     dom.crumb.hidden = !crumbTitle || !hasInput
     if (crumbTitle && hasInput) {
-      dom.crumb.replaceChildren(...[renderIcon(frame.ext?.ext.icon, 13), h('span', null, crumbTitle)].filter(Boolean) as Node[])
+      const extIcon = frame.ext?.ext.icon
+      const sig = `${crumbTitle}|${typeof extIcon === 'string' ? extIcon : frame.ext?.ext.name ?? ''}`
+      if (sig !== this.crumbSig) {
+        this.crumbSig = sig
+        dom.crumb.replaceChildren(...[renderIcon(extIcon, 13), h('span', null, crumbTitle)].filter(Boolean) as Node[])
+      }
+    } else if (this.crumbSig !== null) {
+      this.crumbSig = null
     }
     dom.searchIcon.hidden = depth > 1 || !!this.argMode
 
@@ -2526,8 +2615,8 @@ export class Bar implements QikbarInstance {
       dom.args.hidden = false
     } else {
       dom.args.hidden = true
-      delete dom.args.dataset.for
-      dom.args.replaceChildren()
+      if (dom.args.dataset.for !== undefined) delete dom.args.dataset.for
+      if (dom.args.childElementCount) dom.args.replaceChildren()
       dom.input.hidden = !hasInput
       dom.title.hidden = hasInput
       if (!hasInput) dom.title.textContent = (v as View).title ?? ''
@@ -2553,17 +2642,22 @@ export class Bar implements QikbarInstance {
   private renderFooter(frame: Frame) {
     const dom = this.dom!
     if (!this.toastState || !this._open) this.renderFooterLeft(frame)
-    else this.renderToast()
-    const right: Node[] = []
+    else if (!dom.footerLeft.firstElementChild?.classList.contains('qb-toast')) this.renderToast()
     const custom = this.renderer?.footerPrimary?.()
     const actions = this.actionsFor(this.selectedItem(frame), frame)
     const primary = custom ?? (actions[0] ? { title: this.actionTitle(actions[0]), hotkey: 'enter', run: () => this.runPrimary(frame) } : undefined)
-    if (this.argMode) {
-      right.push(this.footerButton(this.t('runItem', { title: this.argMode.item.title }), 'enter', () => this.submitArgs(), true))
-    } else if (primary) {
-      right.push(this.footerButton(primary.title, primary.hotkey, primary.run, true))
+    const showActions = actions.length > (custom ? 0 : 1) && !this.argMode
+    const primaryTitle = this.argMode ? this.t('runItem', { title: this.argMode.item.title }) : primary?.title ?? ''
+    const primaryHotkey = this.argMode ? 'enter' : primary?.hotkey ?? ''
+    this.footerPrimaryRun = this.argMode ? () => this.submitArgs() : primary?.run
+    const sig = `${primaryTitle}|${primaryHotkey}|${showActions ? `${this.t('actions')}|${this.actionsHotkey}` : ''}`
+    if (sig === this.footerRightSig) return
+    this.footerRightSig = sig
+    const right: Node[] = []
+    if (this.argMode || primary) {
+      right.push(this.footerButton(primaryTitle, primaryHotkey, () => this.footerPrimaryRun?.(), true))
     }
-    if (actions.length > (custom ? 0 : 1) && !this.argMode) {
+    if (showActions) {
       right.push(h('span', { class: 'qb-footer-sep' }), this.footerButton(this.t('actions'), this.actionsHotkey, () => this.openPanel()))
     }
     dom.footerRight.replaceChildren(...right)
@@ -2572,13 +2666,27 @@ export class Bar implements QikbarInstance {
   private renderFooterLeft(frame: Frame) {
     const dom = this.dom!
     const v = frame.view
+    const marked = frame.marked?.size ?? 0
+    const title = this.stack.length > 1 ? (v as View).title ?? '' : ''
+    const extIcon = frame.ext?.ext.icon
+    const sig = marked
+      ? `m:${marked}:${this.t('selected', { count: marked })}`
+      : title
+        ? `t:${title}:${typeof extIcon === 'string' ? extIcon : frame.ext?.ext.name ?? ''}`
+        : this.config.footer
+          ? `f:${this.config.footer}`
+          : this.config.branding
+            ? 'b'
+            : ''
+    if (sig === this.footerLeftSig) return
+    this.footerLeftSig = sig
     const left: Node[] = []
-    if (frame.marked?.size) {
-      left.push(renderIcon('check-square', 14)!, h('span', null, this.t('selected', { count: frame.marked.size })))
-    } else if (this.stack.length > 1 && (v as View).title) {
-      const icon = renderIcon(frame.ext?.ext.icon ?? 'layers', 14)
+    if (marked) {
+      left.push(renderIcon('check-square', 14)!, h('span', null, this.t('selected', { count: marked })))
+    } else if (title) {
+      const icon = renderIcon(extIcon ?? 'layers', 14)
       if (icon) left.push(icon)
-      left.push(h('span', null, (v as View).title!))
+      left.push(h('span', null, title))
     } else if (this.config.footer) left.push(h('span', null, this.config.footer))
     else if (this.config.branding) {
       const a = h('a', { class: 'qb-brand', href: 'https://qikbar.com', target: '_blank', rel: 'noopener' }, renderIcon('command', 13), 'qikbar')
@@ -2621,6 +2729,7 @@ export class Bar implements QikbarInstance {
     if (this._open && this.dom) {
       this.hud?.remove()
       this.hud = undefined
+      this.footerLeftSig = null
       if (t) this.dom.footerLeft.replaceChildren(build('qb-toast'))
       else if (this.top) this.renderFooterLeft(this.top)
       return
@@ -2640,7 +2749,7 @@ export class Bar implements QikbarInstance {
     if (!dom) return
     const c = this.confirmState
     if (!c) {
-      dom.layer.replaceChildren()
+      if (dom.layer.childElementCount) dom.layer.replaceChildren()
       return
     }
     if (dom.layer.firstChild) return

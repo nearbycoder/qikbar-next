@@ -3,3 +3,12 @@
 **/.astro
 .git
 *.log
+.env
+.env.*
+coverage
+assets
+apps/video/out
+apps/video/public
+apps/video/src
+apps/video/scripts
+examples/vanilla

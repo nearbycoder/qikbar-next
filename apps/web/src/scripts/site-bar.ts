@@ -1,7 +1,6 @@
-import { byok, createQikbar, type Item } from '@qikbar/qikbar'
-import { calculator, page, shortcuts, themeSwitcher } from '@qikbar/qikbar/extensions'
+import { createQikbar, type Item } from '@qikbar/qikbar'
 import { demoAI } from './demo-ai'
-import { catalog, installedNames, INSTALLED_KEY } from '../data/extensions'
+import { INSTALLED_KEY, installedNames } from '../lib/installed'
 
 interface SearchEntry {
   title: string
@@ -11,8 +10,25 @@ interface SearchEntry {
   description?: string
 }
 
-let index: Promise<SearchEntry[]> | undefined
-const loadIndex = (): Promise<SearchEntry[]> => (index ??= fetch('/search-index.json').then((r) => r.json()))
+// Map entries into stable Item objects once so the fuzzy matcher's WeakMap cache hits on every keystroke.
+let indexItems: Promise<Item[]> | undefined
+const loadIndex = (): Promise<Item[]> =>
+  (indexItems ??= fetch('/search-index.json')
+    .then((r) => r.json() as Promise<SearchEntry[]>)
+    .then((entries) =>
+      entries.map<Item>((e) => ({
+        id: `doc:${e.href}`,
+        title: e.title,
+        subtitle: e.page ? e.page : e.group,
+        description: e.description,
+        icon: e.page ? 'hash' : 'book',
+        keywords: [e.group, e.page ?? ''].filter(Boolean),
+        href: e.href,
+      })),
+    ))
+
+let promptPromise: Promise<string> | undefined
+const loadPrompt = () => (promptPromise ??= fetch('/prompt.txt').then((r) => r.text()))
 
 const go = (href: string) => {
   location.href = href
@@ -70,7 +86,7 @@ export const bar = createQikbar({
       section: 'Qikbar',
       keywords: ['llm', 'agent', 'prompt', 'install'],
       run: async (ctx) => {
-        const text = await fetch('/prompt.txt').then((r) => r.text())
+        const text = await loadPrompt()
         await ctx.copy(text)
         ctx.toast({ title: 'Prompt copied', message: 'Paste it into your coding agent', style: 'success' })
       },
@@ -84,39 +100,70 @@ export const bar = createQikbar({
       debounce: 0,
       filter: true,
       limit: 8,
-      async search() {
-        const entries = await loadIndex()
-        return entries.map<Item>((e) => ({
-          id: `doc:${e.href}`,
-          title: e.title,
-          subtitle: e.page ? e.page : e.group,
-          description: e.description,
-          icon: e.page ? 'hash' : 'book',
-          keywords: [e.group, e.page ?? ''].filter(Boolean),
-          href: e.href,
-        }))
-      },
+      search: () => loadIndex(),
     },
   ],
-  extensions: [calculator(), themeSwitcher(), page({ headings: '.prose h2[id], .prose h3[id]' }), shortcuts(), byok.settings()],
 })
 
-// Extensions installed from the /extensions page.
+// Load built-in extensions (calculator, theme switcher, page, shortcuts) and BYOK settings lazily
+// when idle or on first open so docs/marketing pages don't parse them on the critical path.
+let extrasLoaded = false
+const loadExtras = () => {
+  if (extrasLoaded) return
+  extrasLoaded = true
+  void import('@qikbar/qikbar/extensions').then(({ calculator, page, shortcuts, themeSwitcher }) => {
+    bar.use(calculator())
+    bar.use(themeSwitcher())
+    bar.use(page({ headings: '.prose h2[id], .prose h3[id]' }))
+    bar.use(shortcuts())
+  })
+  void import('@qikbar/qikbar/ai').then(({ byok }) => bar.use(byok.settings()))
+}
+const idle = (globalThis as any).requestIdleCallback as ((cb: () => void, o?: { timeout: number }) => number) | undefined
+if (idle) idle(loadExtras, { timeout: 2500 })
+else setTimeout(loadExtras, 1200)
+
+// Extensions installed from the /extensions page (catalog loads only when needed).
+let catalogPromise: Promise<typeof import('../data/extensions')> | undefined
+const loadCatalog = () => (catalogPromise ??= import('../data/extensions'))
+const installed = new Set<string>(installedNames())
 const uninstallers = new Map<string, () => void>()
-export function setInstalled(name: string, on: boolean) {
-  const entry = catalog.find((c) => c.extension.name === name)
-  if (!entry) return
-  if (on && !uninstallers.has(name)) uninstallers.set(name, bar.use(entry.extension))
+
+export async function setInstalled(name: string, on: boolean): Promise<void> {
+  if (on) installed.add(name)
+  else installed.delete(name)
+  try {
+    localStorage.setItem(INSTALLED_KEY, JSON.stringify([...installed]))
+  } catch {
+    // ignore
+  }
   if (!on) {
     uninstallers.get(name)?.()
     uninstallers.delete(name)
+    return
   }
-  localStorage.setItem(INSTALLED_KEY, JSON.stringify([...uninstallers.keys()]))
+  if (uninstallers.has(name)) return
+  const { catalog } = await loadCatalog()
+  if (!installed.has(name) || uninstallers.has(name)) return
+  const entry = catalog.find((c) => c.extension.name === name)
+  if (entry) uninstallers.set(name, bar.use(entry.extension))
 }
-for (const name of installedNames()) setInstalled(name, true)
 
-// Warm the docs index when the bar opens.
-bar.on('open', () => void loadIndex())
+if (installed.size) {
+  void loadCatalog().then(({ catalog }) => {
+    for (const name of installed) {
+      if (uninstallers.has(name)) continue
+      const entry = catalog.find((c) => c.extension.name === name)
+      if (entry) uninstallers.set(name, bar.use(entry.extension))
+    }
+  })
+}
+
+// Warm the docs index and extensions when the bar opens.
+bar.on('open', () => {
+  void loadIndex()
+  loadExtras()
+})
 
 declare global {
   interface Window {

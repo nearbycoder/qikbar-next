@@ -124,6 +124,17 @@ const fonts = [
   const $ = <T extends Element>(s: string) => document.querySelector<T>(s)!
   const $$ = <T extends Element>(s: string) => [...document.querySelectorAll<T>(s)]
 
+  const colorInputs = $$<HTMLInputElement>('[data-color]')
+  const textInputs = $$<HTMLInputElement>('[data-text]')
+  const sizeInputs = $$<HTMLInputElement>('[data-size]')
+  const sizeOutputs = new Map(sizeInputs.map((i) => [i.dataset.size!, $(`[data-out="${i.dataset.size}"]`)]))
+  const fontSelect = $<HTMLSelectElement>('[data-font]')
+  const presetBtns = $$<HTMLButtonElement>('[data-preset]')
+  const appearanceBtns = $$<HTMLButtonElement>('[data-appearance] button')
+  const previewBg = $<HTMLElement>('[data-preview-bg]')
+  const outputEl = $('[data-output]')
+  const tabBtns = $$<HTMLButtonElement>('[data-tab]')
+
   /** The full resolved variables for the current preset + appearance + overrides. */
   function resolved(): ThemeVars {
     const { vars, appearance } = resolveThemeVars(state.preset || undefined, state.appearance)
@@ -131,13 +142,15 @@ const fonts = [
     return { ...base, ...vars, ...state.vars }
   }
 
+  let colorCtx: CanvasRenderingContext2D | null | undefined
   function toHex(value: string | undefined): string {
     if (!value) return '#000000'
     if (/^#[0-9a-f]{6}$/i.test(value)) return value
     if (/^#[0-9a-f]{3}$/i.test(value)) return `#${[...value.slice(1)].map((c) => c + c).join('')}`
-    const ctx = document.createElement('canvas').getContext('2d')!
-    ctx.fillStyle = value
-    const v = ctx.fillStyle
+    colorCtx ??= document.createElement('canvas').getContext('2d')
+    if (!colorCtx) return '#000000'
+    colorCtx.fillStyle = value
+    const v = colorCtx.fillStyle
     return /^#/.test(v) ? v : `#${(v.match(/\d+/g) ?? ['0', '0', '0']).slice(0, 3).map((n) => Number(n).toString(16).padStart(2, '0')).join('')}`
   }
 
@@ -145,34 +158,33 @@ const fonts = [
     const theme = state.preset ? { preset: state.preset, vars: state.vars } : { vars: state.vars }
     bar.configure({ theme, appearance: state.appearance })
     const all = resolved()
-    $$<HTMLInputElement>('[data-color]').forEach((i) => (i.value = toHex(all[i.dataset.color!])))
-    $$<HTMLInputElement>('[data-text]').forEach((i) => {
+    colorInputs.forEach((i) => (i.value = toHex(all[i.dataset.color!])))
+    textInputs.forEach((i) => {
       if (document.activeElement !== i) i.value = all[i.dataset.text!] ?? ''
     })
-    $$<HTMLInputElement>('[data-size]').forEach((i) => {
+    sizeInputs.forEach((i) => {
       const v = parseFloat(all[i.dataset.size!] ?? '0')
       i.value = String(v)
-      $(`[data-out="${i.dataset.size}"]`).textContent = `${v}px`
+      sizeOutputs.get(i.dataset.size!)!.textContent = `${v}px`
     })
-    const font = $<HTMLSelectElement>('[data-font]')
-    if (all.font && [...font.options].some((o) => o.value === all.font)) font.value = all.font
-    $$<HTMLButtonElement>('[data-preset]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.preset === state.preset)))
-    $$<HTMLButtonElement>('[data-appearance] button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.value === state.appearance)))
-    $<HTMLElement>('[data-preview-bg]').dataset.appearance = state.appearance
+    if (all.font && [...fontSelect.options].some((o) => o.value === all.font)) fontSelect.value = all.font
+    presetBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.preset === state.preset)))
+    appearanceBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.value === state.appearance)))
+    previewBg.dataset.appearance = state.appearance
 
     const overrides = Object.fromEntries(Object.entries(state.vars).filter(([, v]) => v != null && v !== ''))
     const code =
       state.tab === 'js'
         ? `createQikbar({\n  theme: ${JSON.stringify({ ...(state.preset ? { preset: state.preset } : {}), ...(Object.keys(overrides).length ? { vars: overrides } : {}) }, null, 2).replace(/\n/g, '\n  ').replace(/"(\w+)":/g, '$1:')},\n  appearance: '${state.appearance}',\n})`
         : themeToCss({ ...resolveThemeVars(state.preset || undefined, state.appearance).vars, ...overrides }, `.qb-root[data-qb-appearance='${state.appearance}']`)
-    $('[data-output]').textContent = code
+    outputEl.textContent = code
     const url = new URL(location.href)
     if (state.preset) url.searchParams.set('preset', state.preset)
     else url.searchParams.delete('preset')
     history.replaceState(null, '', url)
   }
 
-  $$<HTMLButtonElement>('[data-preset]').forEach((b) =>
+  presetBtns.forEach((b) =>
     b.addEventListener('click', () => {
       state.preset = b.dataset.preset as ThemePresetName | ''
       state.vars = {}
@@ -181,31 +193,31 @@ const fonts = [
       render()
     }),
   )
-  $$<HTMLButtonElement>('[data-appearance] button').forEach((b) =>
+  appearanceBtns.forEach((b) =>
     b.addEventListener('click', () => {
       state.appearance = b.dataset.value as 'light' | 'dark'
       render()
     }),
   )
-  $$<HTMLInputElement>('[data-color]').forEach((i) =>
+  colorInputs.forEach((i) =>
     i.addEventListener('input', () => {
       state.vars[i.dataset.color!] = i.value
       render()
     }),
   )
-  $$<HTMLInputElement>('[data-text]').forEach((i) =>
+  textInputs.forEach((i) =>
     i.addEventListener('change', () => {
       state.vars[i.dataset.text!] = i.value.trim() || undefined
       render()
     }),
   )
-  $$<HTMLInputElement>('[data-size]').forEach((i) =>
+  sizeInputs.forEach((i) =>
     i.addEventListener('input', () => {
       state.vars[i.dataset.size!] = `${i.value}px`
       render()
     }),
   )
-  $<HTMLSelectElement>('[data-font]').addEventListener('change', (e) => {
+  fontSelect.addEventListener('change', (e) => {
     state.vars.font = (e.target as HTMLSelectElement).value
     render()
   })
@@ -214,15 +226,15 @@ const fonts = [
     state.preset = ''
     render()
   })
-  $$<HTMLButtonElement>('[data-tab]').forEach((t) =>
+  tabBtns.forEach((t) =>
     t.addEventListener('click', () => {
       state.tab = t.dataset.tab as 'js' | 'css'
-      $$<HTMLButtonElement>('[data-tab]').forEach((x) => x.setAttribute('aria-selected', String(x === t)))
+      tabBtns.forEach((x) => x.setAttribute('aria-selected', String(x === t)))
       render()
     }),
   )
   $('[data-copy-output]').addEventListener('click', async () => {
-    await navigator.clipboard.writeText($('[data-output]').textContent ?? '')
+    await navigator.clipboard.writeText(outputEl.textContent ?? '')
     window.qikbar.toast({ title: 'Theme copied', style: 'success' })
   })
 

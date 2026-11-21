@@ -158,9 +158,15 @@ export class ListRenderer implements ViewRenderer {
       els.push(el)
       keys.push(row.key)
     }
-    if (!sameKeys(keys, this.renderedKeys)) {
+    if (!sameKeys(keys, this.renderedKeys) || els.some((el, i) => this.inner.children[i] !== el)) {
       this.inner.replaceChildren(...els)
       this.renderedKeys = keys
+    }
+    if (this.cache.size > 200) {
+      const keep = new Set(keys)
+      const sel = this.frame.itemRows[this.frame.selected]?.key
+      if (sel) keep.add(sel)
+      for (const key of this.cache.keys()) if (!keep.has(key)) this.cache.delete(key)
     }
     this.updateSelection()
   }
@@ -178,7 +184,7 @@ export class ListRenderer implements ViewRenderer {
     let sig = `${row.index}|${row.positions?.join(',') ?? ''}`
     if (this.frame.view.type === 'root' && this.bar.personalize) {
       const id = this.bar.idOf(row.item)
-      sig += `|${this.bar.aliasOf(id) ?? ''}|${this.bar.pins().includes(id) ? 'p' : ''}`
+      sig += `|${this.bar.aliasOf(id) ?? ''}|${this.bar.isPinned(id) ? 'p' : ''}`
     }
     return sig
   }
@@ -205,7 +211,7 @@ export class ListRenderer implements ViewRenderer {
       const id = this.bar.idOf(item)
       const alias = this.bar.aliasOf(id)
       if (alias) right.push(h('span', { class: 'qb-alias', title: this.bar.t('alias') }, alias))
-      if (this.bar.pins().includes(id)) right.push(h('span', { class: 'qb-pin', title: this.bar.t('pinned') }, renderIcon('pin', 13)))
+      if (this.bar.isPinned(id)) right.push(h('span', { class: 'qb-pin', title: this.bar.t('pinned') }, renderIcon('pin', 13)))
     }
     if (item.accessories?.length) right.push(h('span', { class: 'qb-item-accessories' }, ...item.accessories.map(renderAccessory)))
     else if (item.shortcut) right.push(h('span', { class: 'qb-item-accessories' }, renderKbd(item.shortcut)))
@@ -245,10 +251,10 @@ export class ListRenderer implements ViewRenderer {
     if (el) el.setAttribute('aria-selected', 'true')
     this.selectedEl = el
     if (this.bar.isMulti(this.frame)) {
-      for (const r of this.frame.itemRows) {
-        const rowEl = this.cache.get(r.key)?.el
-        if (!rowEl) continue
-        const marked = this.bar.isMarked(this.frame, r.key)
+      for (const key of this.renderedKeys) {
+        const rowEl = this.cache.get(key)?.el
+        if (!rowEl || !(rowEl as any).__item) continue
+        const marked = this.bar.isMarked(this.frame, key)
         if (marked) rowEl.dataset.marked = ''
         else delete rowEl.dataset.marked
         rowEl.setAttribute('aria-checked', marked ? 'true' : 'false')
@@ -411,7 +417,7 @@ export class ListRenderer implements ViewRenderer {
     const f = this.frame
     const row = f.itemRows[f.selected]
     if (!row) return
-    const rowIndex = f.rows.indexOf(row)
+    const rowIndex = row.rowIndex
     const prev = f.rows[rowIndex - 1]
     let top: number
     let bottom: number
@@ -827,7 +833,16 @@ export class FormRenderer implements ViewRenderer {
 export class ChatRenderer implements ViewRenderer {
   readonly el: HTMLElement
   readonly hasInput = true
-  private turnEls: { el: HTMLElement; sig: string }[] = []
+  private turnEls: {
+    el: HTMLElement
+    sig: string
+    md?: HTMLElement
+    toolsEl?: HTMLElement
+    errEl?: HTMLElement
+    toolsSig?: string
+    mdSig?: string
+    errSig?: string
+  }[] = []
   private emptyEl?: HTMLElement
   private raf = 0
 
@@ -861,33 +876,62 @@ export class ChatRenderer implements ViewRenderer {
     }
     const stick = this.el.scrollTop + this.el.clientHeight >= this.el.scrollHeight - 40
     turns.forEach((turn, i) => {
-      const sig = `${turn.text.length}|${turn.streaming}|${turn.error ?? ''}|${turn.tools.map((t) => t.state).join()}`
+      const toolsSig = turn.tools.map((t) => `${t.state}:${t.label}`).join('|')
+      const mdSig = `${turn.text.length}|${turn.streaming}|${turn.tools.length > 0}`
+      const errSig = turn.error ?? ''
+      const sig = `${mdSig}|${errSig}|${toolsSig}`
       const existing = this.turnEls[i]
       if (existing && existing.sig === sig) return
-      let el: HTMLElement
-      if (turn.role === 'user') el = h('div', { class: 'qb-msg-user' }, turn.text)
-      else {
+      if (turn.role === 'user') {
+        const el = h('div', { class: 'qb-msg-user' }, turn.text)
+        if (existing) existing.el.replaceWith(el)
+        else this.el.append(el)
+        this.turnEls[i] = { el, sig }
+        return
+      }
+      let entry = existing
+      if (!entry || !entry.md) {
         const head = h('div', { class: 'qb-msg-head' }, renderIcon('sparkles', 13), this.bar.aiName)
-        const tools = turn.tools.length
-          ? h(
-              'div',
-              { class: 'qb-tools' },
-              ...turn.tools.map((t) => {
-                const icon = renderIcon(t.state === 'running' ? 'loader' : t.state === 'done' ? 'check' : 'x', 12)!
-                if (t.state === 'running') icon.classList.add('qb-spin')
-                return h('span', { class: 'qb-tool', 'data-state': t.state }, icon, t.label)
-              }),
-            )
-          : null
+        const toolsEl = h('div', { class: 'qb-tools', hidden: true })
         const md = h('div', { class: 'qb-md' })
+        const errEl = h('div', { class: 'qb-msg-error', hidden: true })
+        const el = h('div', { class: 'qb-msg-ai' }, head, toolsEl, md, errEl)
+        if (existing) existing.el.replaceWith(el)
+        else this.el.append(el)
+        entry = { el, sig, md, toolsEl, errEl }
+        this.turnEls[i] = entry
+      } else {
+        entry.sig = sig
+      }
+      if (entry.toolsSig !== toolsSig) {
+        entry.toolsSig = toolsSig
+        const toolsEl = entry.toolsEl!
+        if (turn.tools.length) {
+          toolsEl.hidden = false
+          toolsEl.replaceChildren(
+            ...turn.tools.map((t) => {
+              const icon = renderIcon(t.state === 'running' ? 'loader' : t.state === 'done' ? 'check' : 'x', 12)!
+              if (t.state === 'running') icon.classList.add('qb-spin')
+              return h('span', { class: 'qb-tool', 'data-state': t.state }, icon, t.label)
+            }),
+          )
+        } else {
+          toolsEl.hidden = true
+          if (toolsEl.childElementCount) toolsEl.replaceChildren()
+        }
+      }
+      if (entry.mdSig !== mdSig) {
+        entry.mdSig = mdSig
         let html = this.bar.md(turn.text)
         if (turn.streaming) html += turn.text || !turn.tools.length ? '<span class="qb-caret"></span>' : ''
-        md.innerHTML = html
-        el = h('div', { class: 'qb-msg-ai' }, head, tools, md, turn.error ? h('div', { class: 'qb-msg-error' }, turn.error) : null)
+        entry.md!.innerHTML = html
       }
-      if (existing) existing.el.replaceWith(el)
-      else this.el.append(el)
-      this.turnEls[i] = { el, sig }
+      if (entry.errSig !== errSig) {
+        entry.errSig = errSig
+        const errEl = entry.errEl!
+        errEl.hidden = !errSig
+        errEl.textContent = errSig
+      }
     })
     if (stick) this.el.scrollTop = this.el.scrollHeight
   }

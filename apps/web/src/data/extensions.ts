@@ -41,12 +41,4 @@ export const catalog: CatalogEntry[] = [
   { extension: worldClock, file: 'world-clock.ts', try: 'time in tokyo', category: 'Utilities', tags: ['list', 'source', 'Intl'] },
 ]
 
-export const INSTALLED_KEY = 'qikbar-site:installed'
-
-export function installedNames(): string[] {
-  try {
-    return JSON.parse(localStorage.getItem(INSTALLED_KEY) ?? '[]')
-  } catch {
-    return []
-  }
-}
+export { INSTALLED_KEY, installedNames } from '../lib/installed'

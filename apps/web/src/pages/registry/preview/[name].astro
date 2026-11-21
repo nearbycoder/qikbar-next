@@ -1,0 +1,18 @@
+---
+import { Code } from 'astro:components'
+import type { GetStaticPaths } from 'astro'
+import { catalog } from '../../../data/extensions'
+
+export const partial = true
+
+export const getStaticPaths: GetStaticPaths = () => {
+  const sources = import.meta.glob<string>('../../../extensions/*.ts', { query: '?raw', import: 'default', eager: true })
+  return catalog.map((c) => ({
+    params: { name: c.file.replace(/\.ts$/, '') },
+    props: { source: sources[`../../../extensions/${c.file}`] ?? '' },
+  }))
+}
+
+const { source } = Astro.props as { source: string }
+---
+<Code code={source} lang="ts" themes={{ light: 'github-light', dark: 'github-dark-dimmed' }} defaultColor={false} />

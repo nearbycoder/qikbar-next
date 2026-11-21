@@ -1,12 +1,8 @@
 ---
-import { Code } from 'astro:components'
 import Base from '../layouts/Base.astro'
 import Icon from '../components/Icon.astro'
 import ExtIcon from '../components/ExtIcon.astro'
 import { catalog, CATEGORIES } from '../data/extensions'
-
-const sources = import.meta.glob<string>('../extensions/*.ts', { query: '?raw', import: 'default', eager: true })
-const sourceOf = (file: string) => sources[`../extensions/${file}`] ?? ''
 
 const builtIns = [
   { icon: 'calculator', title: 'Calculator', fn: 'calculator()', body: 'Math, percentages and unit conversions as you type.', try: '15% of 240' },
@@ -71,7 +67,7 @@ const repo = 'https://github.com/nearbycoder/qikbar-next/blob/main/apps/web/src/
               <span class="q">{c.try}</span>
               <span class="go">Try it <Icon name="arrow-right" size={13} /></span>
             </button>
-            <button type="button" class="view" data-source={c.file} aria-haspopup="dialog"><Icon name="code" size={14} /> Source</button>
+            <button type="button" class="view" data-source={c.file} data-href={`${repo}/${c.file}`} aria-haspopup="dialog"><Icon name="code" size={14} /> Source</button>
           </div>
         </article>
       ))}
@@ -128,18 +124,12 @@ const repo = 'https://github.com/nearbycoder/qikbar-next/blob/main/apps/web/src/
         <button type="button" class="sd-btn icon" data-source-close aria-label="Close" autofocus><Icon name="x" size={15} /></button>
       </div>
     </div>
-    <div class="sd-body">
-      {catalog.map((c) => (
-        <div class="sd-file" data-file={c.file} data-href={`${repo}/${c.file}`} hidden>
-          <Code code={sourceOf(c.file)} lang="ts" themes={{ light: 'github-light', dark: 'github-dark-dimmed' }} defaultColor={false} />
-        </div>
-      ))}
-    </div>
+    <div class="sd-body" data-source-body></div>
   </dialog>
 </Base>
 
 <script>
-  import { installedNames } from '../data/extensions'
+  import { installedNames } from '../lib/installed'
 
   const sync = () => {
     const installed = new Set(installedNames())
@@ -154,18 +144,19 @@ const repo = 'https://github.com/nearbycoder/qikbar-next/blob/main/apps/web/src/
   document.querySelectorAll<HTMLButtonElement>('[data-install]').forEach((b) =>
     b.addEventListener('click', () => {
       const on = b.getAttribute('aria-pressed') !== 'true'
-      window.qikbarSetInstalled(b.dataset.install!, on)
+      void window.qikbarSetInstalled(b.dataset.install!, on)
       sync()
       window.qikbar.toast({ title: on ? 'Installed. Press ⌘K to try it.' : 'Uninstalled', style: 'success' })
     }),
   )
 
   document.querySelectorAll<HTMLButtonElement>('[data-try]').forEach((b) =>
-    b.addEventListener('click', () => {
+    b.addEventListener('click', async () => {
       const card = b.closest<HTMLElement>('[data-ext]')
       if (card) {
-        window.qikbarSetInstalled(card.dataset.ext!, true)
+        const p = window.qikbarSetInstalled(card.dataset.ext!, true)
         sync()
+        await p
       }
       window.qikbar.open({ query: b.dataset.try })
     }),
@@ -175,16 +166,18 @@ const repo = 'https://github.com/nearbycoder/qikbar-next/blob/main/apps/web/src/
   const cards = [...document.querySelectorAll<HTMLElement>('.ext[data-category]')]
   const chips = [...document.querySelectorAll<HTMLButtonElement>('[data-cat]')]
   const search = document.querySelector<HTMLInputElement>('[data-filter]')!
+  const noneEl = document.querySelector<HTMLElement>('[data-none]')!
   let cat = ''
   const apply = () => {
     const q = search.value.trim().toLowerCase()
+    const words = q ? q.split(/\s+/) : []
     let shown = 0
     for (const c of cards) {
-      const ok = (!cat || c.dataset.category === cat) && (!q || q.split(/\s+/).every((w) => c.dataset.text!.includes(w)))
+      const ok = (!cat || c.dataset.category === cat) && (!words.length || words.every((w) => c.dataset.text!.includes(w)))
       c.hidden = !ok
       if (ok) shown++
     }
-    document.querySelector<HTMLElement>('[data-none]')!.hidden = shown > 0
+    noneEl.hidden = shown > 0
   }
   chips.forEach((chip) =>
     chip.addEventListener('click', () => {
@@ -195,32 +188,58 @@ const repo = 'https://github.com/nearbycoder/qikbar-next/blob/main/apps/web/src/
   )
   search.addEventListener('input', apply)
 
-  // Source viewer
+  // Source viewer (loads pre-highlighted Shiki HTML fragments on demand and caches them).
   const dialog = document.querySelector<HTMLDialogElement>('[data-source-dialog]')!
-  const files = [...dialog.querySelectorAll<HTMLElement>('.sd-file')]
-  let current: HTMLElement | undefined
-  document.querySelectorAll<HTMLButtonElement>('[data-source]').forEach((b) =>
-    b.addEventListener('click', () => {
-      current = files.find((f) => f.dataset.file === b.dataset.source)
-      files.forEach((f) => (f.hidden = f !== current))
-      dialog.querySelector('[data-source-cli-text]')!.textContent = `npx @qikbar/qikbar add ${b.dataset.source!.replace(/\.ts$/, '')}`
-      dialog.querySelector('[data-source-title]')!.textContent = b.dataset.source!
-      dialog.querySelector<HTMLAnchorElement>('[data-source-link]')!.href = current?.dataset.href ?? '#'
+  const bodyEl = dialog.querySelector<HTMLElement>('[data-source-body]')!
+  const cliTextEl = dialog.querySelector<HTMLElement>('[data-source-cli-text]')!
+  const titleEl = dialog.querySelector<HTMLElement>('[data-source-title]')!
+  const linkEl = dialog.querySelector<HTMLAnchorElement>('[data-source-link]')!
+  const previewCache = new Map<string, Promise<string>>()
+  const fetchPreview = (slug: string) => {
+    let p = previewCache.get(slug)
+    if (!p) {
+      p = fetch(`/registry/preview/${slug}/`).then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.text()
+      })
+      previewCache.set(slug, p)
+    }
+    return p
+  }
+  let openToken = 0
+  document.querySelectorAll<HTMLButtonElement>('[data-source]').forEach((b) => {
+    const file = b.dataset.source!
+    const slug = file.replace(/\.ts$/, '')
+    b.addEventListener('pointerenter', () => void fetchPreview(slug).catch(() => {}), { once: true })
+    b.addEventListener('click', async () => {
+      const token = ++openToken
+      cliTextEl.textContent = `npx @qikbar/qikbar add ${slug}`
+      titleEl.textContent = file
+      linkEl.href = b.dataset.href ?? '#'
+      bodyEl.innerHTML = '<div class="sd-loading">Loading source…</div>'
       dialog.showModal()
-      dialog.querySelector('.sd-body')!.scrollTop = 0
-    }),
-  )
+      bodyEl.scrollTop = 0
+      try {
+        const html = await fetchPreview(slug)
+        if (token !== openToken) return
+        bodyEl.innerHTML = html
+        bodyEl.scrollTop = 0
+      } catch {
+        if (token === openToken) bodyEl.innerHTML = '<div class="sd-loading">Could not load source.</div>'
+      }
+    })
+  })
   dialog.querySelector('[data-source-close]')!.addEventListener('click', () => dialog.close())
   dialog.addEventListener('click', (e) => {
     if (e.target === dialog) dialog.close()
   })
   dialog.querySelector('[data-source-cli]')!.addEventListener('click', async () => {
-    const cmd = dialog.querySelector('[data-source-cli-text]')!.textContent ?? ''
+    const cmd = cliTextEl.textContent ?? ''
     await navigator.clipboard.writeText(cmd)
     window.qikbar.toast({ title: 'Command copied', message: cmd, style: 'success' })
   })
   dialog.querySelector('[data-source-copy]')!.addEventListener('click', async () => {
-    await navigator.clipboard.writeText(current?.querySelector('pre')?.innerText ?? '')
+    await navigator.clipboard.writeText(bodyEl.querySelector('pre')?.innerText ?? '')
     window.qikbar.toast({ title: 'Source copied', style: 'success' })
   })
 </script>
@@ -302,5 +321,6 @@ const repo = 'https://github.com/nearbycoder/qikbar-next/blob/main/apps/web/src/
   @media (max-width: 720px) { .sd-cli { display: none; } }
   .sd-btn.icon { padding: 0 7px; }
   .sd-body { overflow: auto; }
+  .sd-body :global(.sd-loading) { padding: 24px 20px; color: var(--muted); font-size: 13.5px; }
   .sd-body :global(.astro-code) { margin: 0; border: 0; border-radius: 0; font-size: 12.5px; padding: 18px 20px; }
 </style>

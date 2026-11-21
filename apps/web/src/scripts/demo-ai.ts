@@ -1,10 +1,10 @@
-import { byok, type AIEvent, type AIProvider, type AIRequest } from '@qikbar/qikbar'
+import type { AIEvent, AIProvider, AIRequest } from '@qikbar/qikbar'
 
 /**
  * The site's AI: if the visitor saved their own key (AI Settings), use it.
  * Otherwise a small scripted model that shows how tool calling works.
  */
-const real = byok()
+let realProvider: AIProvider | undefined
 
 function hasKey() {
   try {
@@ -40,7 +40,11 @@ export const demoAI: AIProvider = {
   id: 'qikbar-demo',
   async *stream(req: AIRequest): AsyncIterable<AIEvent> {
     if (hasKey()) {
-      yield* real.stream(req)
+      if (!realProvider) {
+        const { byok } = await import('@qikbar/qikbar/ai')
+        realProvider = byok()
+      }
+      yield* realProvider.stream(req)
       return
     }
     await sleep(250)

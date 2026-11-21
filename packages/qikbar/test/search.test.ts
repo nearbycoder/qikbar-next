@@ -27,9 +27,13 @@ describe('fuzzyMatch', () => {
     expect(m.positions).toEqual([11, 15])
   })
 
-  it('handles camelCase', () => {
+  it('handles camelCase and digit boundaries', () => {
     const m = fuzzyMatch('ga', 'getAccount')!
     expect(m.positions).toEqual([0, 3])
+    const d = fuzzyMatch('v2', 'Billing v2')!
+    expect(d.positions).toEqual([8, 9])
+    const num = fuzzyMatch('2', 'item2')!
+    expect(num.score).toBeGreaterThan(fuzzyMatch('e', 'item2')!.score)
   })
 
   it('ignores diacritics', () => {
