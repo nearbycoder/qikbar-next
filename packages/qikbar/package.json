@@ -125,17 +125,17 @@
     }
   },
   "devDependencies": {
-    "@types/node": "^24.0.0",
+    "@types/node": "^26.6.6",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "esbuild": "^0.28.2",
-    "happy-dom": "^21.0.1",
-    "react": "^19.3.0",
-    "react-dom": "^19.3.0",
-    "solid-js": "^1.9",
-    "typescript": "^5.9.3",
-    "vitest": "^5.0.4",
-    "vue": "^3.5"
+    "happy-dom": "^21.0.4",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "solid-js": "^1.9.20",
+    "typescript": "^6.0.3",
+    "vitest": "^5.1.1",
+    "vue": "^3.5.46"
   },
   "publishConfig": {
     "access": "public"

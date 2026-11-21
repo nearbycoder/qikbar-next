@@ -29,7 +29,14 @@ const FUNCTIONS: Record<string, (...a: number[]) => number> = {
 
 type Token = { t: 'num'; v: number } | { t: 'op'; v: string } | { t: 'id'; v: string } | { t: '(' } | { t: ')' } | { t: ',' } | { t: '%' }
 
+const hasOwn = Object.prototype.hasOwnProperty
+const MAX_EXPR_LENGTH = 512
+const MAX_PARSE_DEPTH = 64
+const NUM_RE = /(\d[\d_]*(\.\d+)?|\.\d+)(e[+-]?\d+)?/iy
+const ID_RE = /[a-zπ][a-z0-9_]*/iy
+
 function tokenize(src: string): Token[] {
+  if (src.length > MAX_EXPR_LENGTH) throw new Error('Expression too long')
   const out: Token[] = []
   let i = 0
   const s = src.replace(/×/g, '*').replace(/÷/g, '/').replace(/−/g, '-')
@@ -39,7 +46,8 @@ function tokenize(src: string): Token[] {
       i++
       continue
     }
-    const num = s.slice(i).match(/^(\d[\d_]*(\.\d+)?|\.\d+)(e[+-]?\d+)?/i)
+    NUM_RE.lastIndex = i
+    const num = NUM_RE.exec(s)
     if (num) {
       out.push({ t: 'num', v: parseFloat(num[0].replace(/_/g, '')) })
       i += num[0].length
@@ -65,7 +73,8 @@ function tokenize(src: string): Token[] {
       i++
       continue
     }
-    const id = s.slice(i).match(/^[a-zπ][a-z0-9_]*/i)
+    ID_RE.lastIndex = i
+    const id = ID_RE.exec(s)
     if (id) {
       out.push({ t: 'id', v: id[0].toLowerCase() })
       i += id[0].length
@@ -79,7 +88,15 @@ function tokenize(src: string): Token[] {
 /** Recursive-descent parser. Returns NaN-free numbers or throws. */
 class Parser {
   i = 0
+  private depth = 0
   constructor(private tokens: Token[]) {}
+
+  private enter() {
+    if (++this.depth > MAX_PARSE_DEPTH) throw new Error('Expression too deeply nested')
+  }
+  private leave() {
+    this.depth--
+  }
 
   peek() {
     return this.tokens[this.i]
@@ -134,21 +151,31 @@ class Parser {
 
   // power := unary ('^' power)?
   power(): number {
-    const base = this.unary()
-    const t = this.peek()
-    if (t?.t === 'op' && t.v === '^') {
-      this.next()
-      return base ** this.power()
+    this.enter()
+    try {
+      const base = this.unary()
+      const t = this.peek()
+      if (t?.t === 'op' && t.v === '^') {
+        this.next()
+        return base ** this.power()
+      }
+      return base
+    } finally {
+      this.leave()
     }
-    return base
   }
 
   unary(): number {
     const t = this.peek()
     if (t?.t === 'op' && (t.v === '-' || t.v === '+')) {
       this.next()
-      const v = this.unary()
-      return t.v === '-' ? -v : v
+      this.enter()
+      try {
+        const v = this.unary()
+        return t.v === '-' ? -v : v
+      } finally {
+        this.leave()
+      }
     }
     return this.postfix()
   }
@@ -167,23 +194,33 @@ class Parser {
     if (!t) throw new Error('Unexpected end')
     if (t.t === 'num') return t.v
     if (t.t === '(') {
-      const v = this.expr()
-      if (this.next()?.t !== ')') throw new Error('Missing )')
-      return v
+      this.enter()
+      try {
+        const v = this.expr()
+        if (this.next()?.t !== ')') throw new Error('Missing )')
+        return v
+      } finally {
+        this.leave()
+      }
     }
     if (t.t === 'id') {
-      if (t.v in CONSTANTS) return CONSTANTS[t.v]!
-      const fn = FUNCTIONS[t.v]
+      if (hasOwn.call(CONSTANTS, t.v)) return CONSTANTS[t.v]!
+      const fn = hasOwn.call(FUNCTIONS, t.v) ? FUNCTIONS[t.v] : undefined
       if (fn) {
         if (this.peek()?.t !== '(') return fn(this.power())
         this.next()
-        const args = [this.expr()]
-        while (this.peek()?.t === ',') {
-          this.next()
-          args.push(this.expr())
+        this.enter()
+        try {
+          const args = [this.expr()]
+          while (this.peek()?.t === ',') {
+            this.next()
+            args.push(this.expr())
+          }
+          if (this.next()?.t !== ')') throw new Error('Missing )')
+          return fn(...args)
+        } finally {
+          this.leave()
         }
-        if (this.next()?.t !== ')') throw new Error('Missing )')
-        return fn(...args)
       }
       throw new Error(`Unknown "${t.v}"`)
     }

@@ -14,6 +14,13 @@ const index = {
     { name: 'hacker-news', title: 'Hacker News', description: 'Top stories', file: 'hacker-news.ts' },
   ],
 }
+const maliciousIndex = {
+  version: 1,
+  extensions: [
+    { name: '../../escape', title: 'Bad', file: 'escape.ts' },
+    { name: 'evil-file', title: 'Bad', file: '../secret.ts' },
+  ],
+}
 const files: Record<string, string> = {
   'weather.ts': "import { defineExtension } from '@qikbar/qikbar'\nexport default defineExtension({ name: 'weather', title: 'Weather' })\n",
   'hacker-news.ts': "import { defineExtension } from '@qikbar/qikbar'\nexport default defineExtension({ name: 'hacker-news', title: 'Hacker News' })\n",
@@ -26,6 +33,7 @@ let cwd = ''
 beforeAll(async () => {
   server = createServer((req, res) => {
     const path = (req.url ?? '').replace(/^\/registry\//, '')
+    if (req.url === '/evil/index.json') return res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(maliciousIndex))
     if (path === 'index.json') return res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify(index))
     if (files[path]) return res.writeHead(200, { 'content-type': 'text/plain' }).end(files[path])
     res.writeHead(404).end('not found')
@@ -112,5 +120,21 @@ describe('qikbar CLI', () => {
     const down = await run(['list'], { QIKBAR_REGISTRY: 'http://127.0.0.1:1/registry' })
     expect(down.code).toBe(1)
     expect(down.stderr).toContain("Couldn't reach")
+  })
+
+  it('blocks path traversal and unsafe registry protocols', async () => {
+    const evilRegistry = registry.replace('/registry', '/evil')
+    const badName = await run(['add', '../../escape'], { QIKBAR_REGISTRY: evilRegistry })
+    expect(badName.code).toBe(1)
+    expect(badName.stderr).toContain('unsafe extension name')
+    expect(existsSync(join(cwd, 'escape.ts'))).toBe(false)
+
+    const badFile = await run(['add', 'evil-file'], { QIKBAR_REGISTRY: evilRegistry })
+    expect(badFile.code).toBe(1)
+    expect(badFile.stderr).toContain('unsafe extension source path')
+
+    const badProto = await run(['list'], { QIKBAR_REGISTRY: 'file:///etc/passwd' })
+    expect(badProto.code).toBe(1)
+    expect(badProto.stderr).toContain('Unsupported registry protocol')
   })
 })

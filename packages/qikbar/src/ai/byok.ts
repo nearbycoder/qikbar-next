@@ -27,6 +27,22 @@ const LABELS: Record<ByokVendor, string> = {
   'openai-compatible': 'OpenAI-compatible (OpenRouter, Groq, Ollama…)',
 }
 
+function validBaseURL(raw: string | undefined): string | undefined {
+  const s = raw?.trim()
+  if (!s) return undefined
+  let u: URL
+  try {
+    u = new URL(s)
+  } catch {
+    return 'Enter a valid URL (e.g. https://api.openai.com/v1).'
+  }
+  const local = u.hostname === 'localhost' || u.hostname === '127.0.0.1' || u.hostname === '[::1]'
+  if (u.protocol !== 'https:' && !(u.protocol === 'http:' && local)) {
+    return 'Base URL must use https:// (or http:// for localhost).'
+  }
+  return undefined
+}
+
 function read(storage: StorageAdapter, key: string): ByokSettings | undefined {
   try {
     const raw = storage.getItem(key)
@@ -59,12 +75,18 @@ export const byok = /* @__PURE__ */ Object.assign(function byok(options: ByokOpt
         yield { type: 'done', message: { role: 'assistant', content: '' } }
         return
       }
+      const urlErr = s.vendor === 'openai-compatible' ? validBaseURL(s.baseURL) : undefined
+      if (urlErr) {
+        yield { type: 'error', error: urlErr }
+        yield { type: 'done', message: { role: 'assistant', content: '' } }
+        return
+      }
       const provider =
         s.vendor === 'anthropic'
           ? anthropic({ apiKey: s.apiKey, model: s.model || undefined })
           : s.vendor === 'gemini'
             ? gemini({ apiKey: s.apiKey, model: s.model || undefined })
-            : openai({ apiKey: s.apiKey || undefined, model: s.model || undefined, baseURL: s.baseURL || undefined })
+            : openai({ apiKey: s.apiKey || undefined, model: s.model || undefined, baseURL: s.baseURL?.trim() || undefined })
       yield* provider.stream(req)
     },
   }
@@ -111,7 +133,13 @@ function settingsExtension(options: ByokOptions = {}): Extension {
                 description: 'Your key never leaves your browser except to call the provider directly.',
               },
               { name: 'model', label: 'Model', placeholder: 'Leave empty for the default', defaultValue: current?.model ?? '' },
-              { name: 'baseURL', label: 'Base URL', placeholder: 'Only for OpenAI-compatible APIs', defaultValue: current?.baseURL ?? '' },
+              {
+                name: 'baseURL',
+                label: 'Base URL',
+                placeholder: 'Only for OpenAI-compatible APIs',
+                defaultValue: current?.baseURL ?? '',
+                validate: (value) => validBaseURL(typeof value === 'string' ? value : ''),
+              },
             ],
             onSubmit(values, ctx) {
               storage.setItem(key, JSON.stringify(values))

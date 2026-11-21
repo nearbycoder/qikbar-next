@@ -5,51 +5,64 @@
  * links, images, block quotes, ordered/unordered/task lists, tables and rules.
  */
 
+import { isSafeUrl } from './dom.js'
+
 const ESC: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
 
 export function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ESC[c]!)
 }
 
-function safeUrl(url: string): string | null {
+function safeUrl(url: string, allowImage = false): string | null {
   const u = url.trim()
-  if (/^(https?:|mailto:|tel:|#|\/|\.\.?\/)/i.test(u)) return u
-  if (/^data:image\/(png|jpe?g|gif|webp|avif);/i.test(u)) return u
-  if (!/^[a-z][a-z0-9+.-]*:/i.test(u)) return u // relative
-  return null
+  return isSafeUrl(u, allowImage) && (!allowImage || !/^data:image\/svg\+xml/i.test(u)) ? u : null
 }
 
-function inline(src: string): string {
-  // Protect code spans first.
-  const codes: string[] = []
-  let s = src.replace(/(`+)([\s\S]*?[^`])\1(?!`)/g, (_, __, code: string) => {
-    codes.push(`<code>${escapeHtml(code.trim())}</code>`)
-    return `\u0000${codes.length - 1}\u0000`
-  })
-  s = escapeHtml(s)
-  // Images ![alt](src)
-  s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+&quot;([^&]*)&quot;)?\)/g, (m, alt: string, url: string) => {
-    const safe = safeUrl(unescape(url))
-    return safe ? `<img src="${escapeHtml(safe)}" alt="${alt}" loading="lazy">` : m
-  })
-  // Links [text](url)
-  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+&quot;([^&]*)&quot;)?\)/g, (m, text: string, url: string) => {
-    const safe = safeUrl(unescape(url))
-    if (!safe) return text
-    const external = /^https?:/i.test(safe)
-    return `<a href="${escapeHtml(safe)}"${external ? ' target="_blank" rel="noopener noreferrer"' : ''}>${text}</a>`
-  })
-  // Autolinks
-  s = s.replace(/(^|[\s(])(https?:\/\/[^\s<)]+[^\s<).,;:!?'"])/g, (_, pre: string, url: string) => `${pre}<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`)
-  // Bold, italic, strikethrough
+function emphasize(s: string): string {
   s = s.replace(/\*\*([^*]+)\*\*|__([^_]+)__/g, (_, a, b) => `<strong>${a ?? b}</strong>`)
   s = s.replace(/(^|[^*\w])\*([^*\s][^*]*?)\*(?!\w)/g, '$1<em>$2</em>')
   s = s.replace(/(^|[^_\w])_([^_\s][^_]*?)_(?!\w)/g, '$1<em>$2</em>')
   s = s.replace(/~~([^~]+)~~/g, '<del>$1</del>')
+  return s
+}
+
+function inline(src: string): string {
+  // Strip NUL bytes so user input can never forge internal placeholder tokens.
+  const tokens: string[] = []
+  const stash = (html: string) => {
+    const idx = tokens.push(html) - 1
+    return `\u0000${idx}\u0000`
+  }
+  // Protect code spans first.
+  // eslint-disable-next-line no-control-regex
+  let s = src.replace(/\u0000/g, '').replace(/(`+)([\s\S]*?[^`])\1(?!`)/g, (_, __, code: string) => stash(`<code>${escapeHtml(code.trim())}</code>`))
+  s = escapeHtml(s)
+  // Images ![alt](src) — stashed so autolinks/emphasis never rewrite attributes.
+  s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)(?:\s+&quot;([^&]*)&quot;)?\)/g, (m, alt: string, url: string) => {
+    const safe = safeUrl(unescape(url), true)
+    return safe ? stash(`<img src="${escapeHtml(safe)}" alt="${alt}" loading="lazy">`) : m
+  })
+  // Links [text](url) — stashed so autolinks never nest <a> inside <a> or break href attributes.
+  s = s.replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+&quot;([^&]*)&quot;)?\)/g, (_m, text: string, url: string) => {
+    const safe = safeUrl(unescape(url))
+    if (!safe) return emphasize(text)
+    const external = /^https?:/i.test(safe)
+    return stash(`<a href="${escapeHtml(safe)}"${external ? ' target="_blank" rel="noopener noreferrer"' : ''}>${emphasize(text)}</a>`)
+  })
+  // Autolinks — stashed so emphasis never rewrites underscores inside URLs.
+  s = s.replace(/(^|[\s(])(https?:\/\/[^\s<)]+[^\s<).,;:!?'"])/g, (_, pre: string, url: string) => {
+    const safe = safeUrl(unescape(url))
+    return safe ? `${pre}${stash(`<a href="${escapeHtml(safe)}" target="_blank" rel="noopener noreferrer">${escapeHtml(safe)}</a>`)}` : `${pre}${url}`
+  })
+  // Bold, italic, strikethrough
+  s = emphasize(s)
   // Hard line breaks
   s = s.replace(/ {2,}\n|\\\n/g, '<br>')
+  // Restore stashed tokens (two passes handles code spans inside links).
   // eslint-disable-next-line no-control-regex
-  return s.replace(/\u0000(\d+)\u0000/g, (_, i) => codes[Number(i)]!)
+  s = s.replace(/\u0000(\d+)\u0000/g, (_, i) => tokens[Number(i)] ?? '')
+  // eslint-disable-next-line no-control-regex
+  return s.replace(/\u0000(\d+)\u0000/g, (_, i) => tokens[Number(i)] ?? '')
 }
 
 function unescape(s: string): string {
@@ -61,7 +74,9 @@ interface ListFrame {
   indent: number
 }
 
-export function renderMarkdown(md: string, options: { copyLabel?: string } = {}): string {
+const MAX_QUOTE_DEPTH = 16
+
+export function renderMarkdown(md: string, options: { copyLabel?: string } = {}, depth = 0): string {
   const copyLabel = escapeHtml(options.copyLabel ?? 'Copy')
   const lines = md.replace(/\r\n?/g, '\n').split('\n')
   const out: string[] = []
@@ -110,13 +125,14 @@ export function renderMarkdown(md: string, options: { copyLabel?: string } = {})
       continue
     }
 
-    // Heading
-    const heading = line.match(/^(#{1,6})\s+(.*?)\s*#*\s*$/)
+    // Heading (linear-time trailing # stripping avoids regex backtracking).
+    const heading = line.match(/^(#{1,6})\s+(.+)$/)
     if (heading) {
       flushPara()
       closeLists()
       const level = heading[1]!.length
-      out.push(`<h${level}>${inline(heading[2]!)}</h${level}>`)
+      const content = heading[2]!.trim().replace(/\s+#+$/, '').trim()
+      out.push(`<h${level}>${inline(content)}</h${level}>`)
       i++
       continue
     }
@@ -131,12 +147,12 @@ export function renderMarkdown(md: string, options: { copyLabel?: string } = {})
     }
 
     // Block quote
-    if (/^\s*>/.test(line)) {
+    if (/^\s*>/.test(line) && depth < MAX_QUOTE_DEPTH) {
       flushPara()
       closeLists()
       const body: string[] = []
       while (i < lines.length && /^\s*>/.test(lines[i]!)) body.push(lines[i++]!.replace(/^\s*>\s?/, ''))
-      out.push(`<blockquote>${renderMarkdown(body.join('\n'))}</blockquote>`)
+      out.push(`<blockquote>${renderMarkdown(body.join('\n'), options, depth + 1)}</blockquote>`)
       continue
     }
 

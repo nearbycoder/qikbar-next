@@ -46,18 +46,38 @@ function toItem(b: Bookmark, ctx: Context, refresh?: () => void): Item {
   }
 }
 
+function normalizeHttpUrl(raw: string): string | null {
+  let s = raw.trim()
+  if (!s) return null
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(s)) s = `https://${s}`
+  try {
+    const u = new URL(s)
+    return u.protocol === 'https:' || u.protocol === 'http:' ? u.href : null
+  } catch {
+    return null
+  }
+}
+
 function addForm(ctx: Context, initial: Partial<Bookmark> = {}) {
   return form({
     title: 'Add Bookmark',
     submitLabel: 'Save Bookmark',
     fields: [
-      { name: 'url', label: 'URL', type: 'url', required: true, placeholder: 'https://…', defaultValue: initial.url ?? '' },
+      {
+        name: 'url',
+        label: 'URL',
+        type: 'url',
+        required: true,
+        placeholder: 'https://…',
+        defaultValue: initial.url ?? '',
+        validate: (v) => (normalizeHttpUrl(String(v ?? '')) ? undefined : 'Enter an http:// or https:// URL'),
+      },
       { name: 'title', label: 'Title', placeholder: 'Defaults to the domain', defaultValue: initial.title ?? '' },
       { name: 'tags', label: 'Tags', placeholder: 'design, reading', description: 'Comma separated. Tags are searchable.' },
     ],
     onSubmit(values, c) {
-      let url = String(values.url).trim()
-      if (!/^[a-z]+:\/\//i.test(url)) url = `https://${url}`
+      const url = normalizeHttpUrl(String(values.url))
+      if (!url) return false
       const bookmark: Bookmark = {
         id: crypto.randomUUID(),
         url,

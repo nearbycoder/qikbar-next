@@ -74,13 +74,17 @@ describe('rank', () => {
     expect(rank(items, '').length).toBe(items.length)
   })
 
-  it('is fast on large lists', () => {
+  it('is fast on large lists and matches full ranking stably with limit', () => {
     const many = Array.from({ length: 20000 }, (_, i) => ({ title: `Project ${i} ${['alpha', 'beta', 'gamma', 'delta'][i % 4]} dashboard`, keywords: ['team', `id-${i}`] }))
     const start = performance.now()
     const r = rank(many, 'gam dash', { limit: 50 })
     const ms = performance.now() - start
     expect(r.length).toBe(50)
     expect(ms).toBeLessThan(400)
+
+    const sample = Array.from({ length: 200 }, (_, i) => ({ title: `Item ${i % 5 === 0 ? 'Alpha' : 'Beta'} ${Math.floor(i / 10)}` }))
+    expect(rank(sample, 'a', { limit: 15 }).map((x) => x.item)).toEqual(rank(sample, 'a').slice(0, 15).map((x) => x.item))
+    expect(rank(sample, 'alpha', { limit: 10 }).map((x) => x.item)).toEqual(rank(sample, 'alpha').slice(0, 10).map((x) => x.item))
   })
 })
 

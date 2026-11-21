@@ -585,15 +585,23 @@ const gallery = catalog.map((c) => ({ name: c.extension.name, title: c.extension
   // Copy buttons
   document.querySelectorAll<HTMLButtonElement>('[data-copy]').forEach((b) =>
     b.addEventListener('click', async () => {
-      await navigator.clipboard.writeText(b.dataset.copy!)
-      window.qikbar.toast({ title: 'Copied to clipboard', message: b.dataset.copy, style: 'success' })
+      try {
+        await navigator.clipboard.writeText(b.dataset.copy!)
+        window.qikbar.toast({ title: 'Copied to clipboard', message: b.dataset.copy, style: 'success' })
+      } catch {
+        window.qikbar.toast({ title: 'Copy failed', style: 'failure' })
+      }
     }),
   )
   document.querySelector('[data-copy-prompt]')?.addEventListener('click', async () => {
-    const inlinePrompt = document.querySelector('.prompt-text code')?.textContent
-    const text = typeof inlinePrompt === 'string' && inlinePrompt ? inlinePrompt : await fetch('/prompt.txt').then((r) => r.text())
-    await navigator.clipboard.writeText(text)
-    window.qikbar.toast({ title: 'Prompt copied', message: 'Paste it into your coding agent', style: 'success' })
+    try {
+      const inlinePrompt = document.querySelector('.prompt-text code')?.textContent
+      const text = typeof inlinePrompt === 'string' && inlinePrompt ? inlinePrompt : await fetch('/prompt.txt').then((r) => r.text())
+      await navigator.clipboard.writeText(text)
+      window.qikbar.toast({ title: 'Prompt copied', message: 'Paste it into your coding agent', style: 'success' })
+    } catch {
+      window.qikbar.toast({ title: 'Copy failed', style: 'failure' })
+    }
   })
 </script>
 
@@ -658,7 +666,7 @@ const gallery = catalog.map((c) => ({ name: c.extension.name, title: c.extension
   @media (prefers-reduced-motion: reduce) { .film-orb { animation: none; } }
   @media (max-width: 600px) { .film { border-radius: 14px; } .film-orb { width: 48px; height: 48px; } .film-label strong { font-size: 15px; } .film-label span { font-size: 12px; } }
 
-  .section { margin-top: 140px; }
+  .section { margin-top: 140px; content-visibility: auto; contain-intrinsic-size: auto 520px; }
   .features { margin-top: 44px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
   .feature { padding: 22px 22px 24px; transition: border-color .2s, transform .2s; }
   .feature:hover { border-color: var(--border-strong); }

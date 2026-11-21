@@ -9,15 +9,17 @@ async function* lines(response: Response): AsyncIterable<string> {
       const { value, done } = await reader.read()
       if (done) break
       buffer += decoder.decode(value, { stream: true })
+      let start = 0
       let nl: number
-      while ((nl = buffer.indexOf('\n')) >= 0) {
-        const line = buffer.slice(0, nl).replace(/\r$/, '')
-        buffer = buffer.slice(nl + 1)
-        yield line
+      while ((nl = buffer.indexOf('\n', start)) >= 0) {
+        const end = nl > start && buffer.charCodeAt(nl - 1) === 13 ? nl - 1 : nl
+        yield buffer.slice(start, end)
+        start = nl + 1
       }
+      if (start > 0) buffer = buffer.slice(start)
     }
     buffer += decoder.decode()
-    if (buffer) yield buffer
+    if (buffer) yield buffer.endsWith('\r') ? buffer.slice(0, -1) : buffer
   } finally {
     reader.releaseLock()
   }

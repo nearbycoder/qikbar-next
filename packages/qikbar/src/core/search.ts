@@ -67,11 +67,10 @@ function charBonus(target: string, index: number): number {
   return 0
 }
 
-function scorePositions(query: string, target: string, positions: number[]): number {
+function scorePositions(query: string, target: string, positions: ArrayLike<number>, len = positions.length): number {
   let score = 0
   let prev = -2
   let streak = 0
-  const len = positions.length
   for (let k = 0; k < len; k++) {
     const p = positions[k]!
     let s = SCORE_MATCH + charBonus(target, p)
@@ -92,11 +91,28 @@ function scorePositions(query: string, target: string, positions: number[]): num
   return score
 }
 
+function scoreContiguous(query: string, target: string, start: number, len: number): number {
+  let score = 0
+  for (let k = 0; k < len; k++) {
+    const p = start + k
+    let s = SCORE_MATCH + charBonus(target, p)
+    if (k > 0) s += BONUS_CONSECUTIVE + (k < 3 ? k : 3)
+    if (target.charCodeAt(p) === query.charCodeAt(k)) s += 1
+    score += s
+  }
+  return score
+}
+
 function rangeArray(start: number, len: number): number[] {
   const out = new Array<number>(len)
   for (let i = 0; i < len; i++) out[i] = start + i
   return out
 }
+
+const EMPTY_POSITIONS: number[] = []
+const SCRATCH_CAP = 64
+const scratchA = new Int32Array(SCRATCH_CAP)
+const scratchB = new Int32Array(SCRATCH_CAP)
 
 /**
  * Match `query` against `target`.
@@ -105,11 +121,36 @@ function rangeArray(start: number, len: number): number[] {
 export function fuzzyMatch(query: string, target: string, targetNorm: string = normalize(target)): FuzzyMatch | null {
   const m = query.length
   const n = targetNorm.length
-  if (m === 0) return { score: 0, positions: [] }
+  if (m === 0) return { score: 0, positions: EMPTY_POSITIONS }
   if (m > n) return null
 
   if (m === n && targetNorm === query) {
     return { score: 1, positions: rangeArray(0, m) }
+  }
+
+  // Fast path for single-character queries (the first keystroke of every search).
+  if (m === 1) {
+    const q0 = query.charCodeAt(0)
+    let bestIdx = -1
+    let bestScore = -1
+    let bestBonus = 0
+    for (let i = 0; i < n; i++) {
+      if (targetNorm.charCodeAt(i) !== q0) continue
+      const bonus = charBonus(target, i)
+      const s = SCORE_MATCH + bonus + (target.charCodeAt(i) === q0 ? 1 : 0)
+      if (s > bestScore) {
+        bestScore = s
+        bestIdx = i
+        bestBonus = bonus
+        if (bonus === BONUS_FIRST && s === SCORE_MATCH + BONUS_FIRST + 1) break
+      }
+    }
+    if (bestIdx < 0) return null
+    const lengthPenalty = Math.min((n - 1) * 0.15, 6)
+    let score = (bestScore - lengthPenalty) / MAX_PER_CHAR
+    if (bestBonus === 0) score *= 0.72
+    score = Math.max(0.01, Math.min(0.99, score))
+    return { score, positions: [bestIdx] }
   }
 
   // 1. Forward pass: is the query a subsequence? Find the earliest end.
@@ -144,35 +185,50 @@ export function fuzzyMatch(query: string, target: string, targetNorm: string = n
   }
 
   // 3. Greedy forward passes from the tight window and from word boundaries,
-  //    preferring boundary characters. Keep the best.
-  let bestPositions = greedyFrom(query, target, targetNorm, start)
-  let best = bestPositions ? scorePositions(query, target, bestPositions) : -Infinity
+  //    preferring boundary characters. Keep the best without per-try array allocations.
+  const useScratch = m <= SCRATCH_CAP
+  let bestBuf: Int32Array | number[] = useScratch ? scratchA : new Array<number>(m)
+  let candBuf: Int32Array | number[] = useScratch ? scratchB : new Array<number>(m)
+  let hasBest = greedyFrom(query, target, targetNorm, start, bestBuf)
+  let best = hasBest ? scorePositions(query, target, bestBuf, m) : -Infinity
   let tries = 0
   const q0 = query.charCodeAt(0)
   const limit = n - m + 1
   for (let i = 0; i < limit && tries < 4; i++) {
     if (i === start || targetNorm.charCodeAt(i) !== q0 || charBonus(target, i) === 0) continue
     tries++
-    const candidate = greedyFrom(query, target, targetNorm, i)
-    if (!candidate) continue
-    const s = scorePositions(query, target, candidate)
+    if (!greedyFrom(query, target, targetNorm, i, candBuf)) continue
+    const s = scorePositions(query, target, candBuf, m)
     if (s > best) {
       best = s
-      bestPositions = candidate
+      hasBest = true
+      const tmp = bestBuf
+      bestBuf = candBuf
+      candBuf = tmp
     }
   }
-  if (!bestPositions) return null
+  if (!hasBest) return null
 
-  // 4. Contiguous substring matches often beat scattered ones; check the first few.
+  // 4. Contiguous substring matches often beat scattered ones; check the first few without allocating.
+  let bestContigStart = -1
   let idx = targetNorm.indexOf(query)
   for (let t = 0; idx >= 0 && t < 4; t++) {
-    const sub = rangeArray(idx, m)
-    const s = scorePositions(query, target, sub)
+    const s = scoreContiguous(query, target, idx, m)
     if (s > best) {
       best = s
-      bestPositions = sub
+      bestContigStart = idx
     }
     idx = targetNorm.indexOf(query, idx + 1)
+  }
+
+  let bestPositions: number[]
+  if (bestContigStart >= 0) {
+    bestPositions = rangeArray(bestContigStart, m)
+  } else if (useScratch) {
+    bestPositions = new Array<number>(m)
+    for (let k = 0; k < m; k++) bestPositions[k] = bestBuf[k]!
+  } else {
+    bestPositions = bestBuf as number[]
   }
 
   // Prefer shorter targets slightly.
@@ -180,7 +236,7 @@ export function fuzzyMatch(query: string, target: string, targetNorm: string = n
   let score = (best - lengthPenalty) / (m * MAX_PER_CHAR)
   // Each run of matched characters that starts mid-word is a weak signal
   // ("set" in "Use SysTEm Theme"); acronyms and word prefixes are not.
-  for (let k = 0; k < bestPositions.length; k++) {
+  for (let k = 0; k < m; k++) {
     const p = bestPositions[k]!
     if ((k === 0 || p !== bestPositions[k - 1]! + 1) && charBonus(target, p) === 0) score *= 0.72
   }
@@ -188,10 +244,9 @@ export function fuzzyMatch(query: string, target: string, targetNorm: string = n
   return { score, positions: bestPositions }
 }
 
-function greedyFrom(query: string, target: string, targetNorm: string, start: number): number[] | null {
+function greedyFrom(query: string, target: string, targetNorm: string, start: number, positions: Int32Array | number[]): boolean {
   const m = query.length
   const n = targetNorm.length
-  const positions = new Array<number>(m)
   let qi = 0
   let qch = query.charCodeAt(0)
   for (let i = start; i < n && qi < m; i++) {
@@ -205,7 +260,7 @@ function greedyFrom(query: string, target: string, targetNorm: string, start: nu
     qi++
     if (qi < m) qch = query.charCodeAt(qi)
   }
-  return qi === m ? positions : null
+  return qi === m
 }
 
 function findBoundary(targetNorm: string, target: string, query: string, qi: number, from: number): number {
@@ -310,7 +365,7 @@ export interface ItemMatch {
 /** Score an item against a query. Returns null when it doesn't match. */
 export function matchItem(item: Item, query: string): ItemMatch | null {
   const q = normalize(query.trim())
-  if (!q) return { score: 0, positions: [] }
+  if (!q) return { score: 0, positions: EMPTY_POSITIONS }
   const tokens = q.split(/\s+/).filter(Boolean)
   const tokenMasks = tokens.map((t) => charMask(t))
   return matchPrepared(item, q, tokens, charMask(q), tokenMasks)
@@ -396,7 +451,7 @@ function matchPrepared(item: Item, q: string, tokens: string[], qm: number, toke
   }
 
   let score = 0
-  let finalPositions: number[] = []
+  let finalPositions: number[] = EMPTY_POSITIONS
   if (whole && whole.score >= tokenScore) {
     score = whole.score
     finalPositions = whole.positions
@@ -429,36 +484,88 @@ export interface RankOptions {
   threshold?: number
 }
 
+const heapLess = (sA: number, iA: number, sB: number, iB: number) => sA < sB || (sA === sB && iA > iB)
+
 /** Filter and sort items by relevance to `query`. Stable for equal scores. */
 export function rank<T extends Item>(items: readonly T[], query: string, options: RankOptions = {}): RankedItem<T>[] {
   const { boost, limit, threshold = 0.05 } = options
-  const out: RankedItem<T>[] = []
   const q = normalize(query.trim())
   if (!q) {
+    const out: RankedItem<T>[] = []
+    let needSort = false
+    let firstScore = 0
     for (let i = 0; i < items.length; i++) {
       const item = items[i]!
       let score = (item.priority ?? 0) * 0.1
       if (boost) score += boost(item)
-      out.push({ item, score, positions: [] })
+      if (i === 0) firstScore = score
+      else if (score !== firstScore) needSort = true
+      out.push({ item, score, positions: EMPTY_POSITIONS })
     }
-  } else {
-    const tokens = q.split(/\s+/).filter(Boolean)
-    const qm = charMask(q)
-    const tokenMasks = tokens.length === 1 ? [qm] : tokens.map((t) => charMask(t))
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i]!
-      const m = matchPrepared(item, q, tokens, qm, tokenMasks)
-      if (!m || m.score < threshold) continue
-      let score = m.score + (item.priority ?? 0) * 0.1
-      if (boost) score += boost(item)
+    if (needSort) out.sort((a, b) => b.score - a.score)
+    return limit ? out.slice(0, limit) : out
+  }
+
+  const tokens = q.split(/\s+/).filter(Boolean)
+  const qm = charMask(q)
+  const tokenMasks = tokens.length === 1 ? [qm] : tokens.map((t) => charMask(t))
+  const useHeap = !!limit && limit > 0 && items.length > limit * 2
+  const out: RankedItem<T>[] = []
+  const hIdx = useHeap ? new Int32Array(limit) : undefined
+  let topScore = 0
+
+  for (let i = 0; i < items.length; i++) {
+    const item = items[i]!
+    const m = matchPrepared(item, q, tokens, qm, tokenMasks)
+    if (!m || m.score < threshold) continue
+    let score = m.score + (item.priority ?? 0) * 0.1
+    if (boost) score += boost(item)
+    if (score > topScore) topScore = score
+    if (!useHeap) {
       out.push({ item, score, positions: m.positions })
+    } else if (out.length < limit) {
+      const entry: RankedItem<T> = { item, score, positions: m.positions }
+      let pos = out.length
+      out.push(entry)
+      while (pos > 0) {
+        const parent = (pos - 1) >> 1
+        if (!heapLess(score, i, out[parent]!.score, hIdx![parent]!)) break
+        out[pos] = out[parent]!
+        hIdx![pos] = hIdx![parent]!
+        pos = parent
+      }
+      out[pos] = entry
+      hIdx![pos] = i
+    } else if (score > out[0]!.score) {
+      const entry: RankedItem<T> = { item, score, positions: m.positions }
+      let pos = 0
+      for (;;) {
+        const left = (pos << 1) + 1
+        if (left >= limit) break
+        const right = left + 1
+        const child = right < limit && heapLess(out[right]!.score, hIdx![right]!, out[left]!.score, hIdx![left]!) ? right : left
+        if (!heapLess(out[child]!.score, hIdx![child]!, score, i)) break
+        out[pos] = out[child]!
+        hIdx![pos] = hIdx![child]!
+        pos = child
+      }
+      out[pos] = entry
+      hIdx![pos] = i
     }
   }
-  // ES2019+ guarantees Array.prototype.sort is stable.
+
+  const minKeep = q.length >= 3 && topScore >= 0.6 ? topScore * 0.55 : -Infinity
+  if (useHeap) {
+    const order: number[] = []
+    for (let i = 0; i < out.length; i++) if (out[i]!.score >= minKeep) order.push(i)
+    order.sort((a, b) => out[b]!.score - out[a]!.score || hIdx![a]! - hIdx![b]!)
+    return order.map((k) => out[k]!)
+  }
+  if (minKeep > 0) {
+    let w = 0
+    for (let i = 0; i < out.length; i++) if (out[i]!.score >= minKeep) out[w++] = out[i]!
+    out.length = w
+  }
   out.sort((a, b) => b.score - a.score)
-  let sorted = out
-  // With a strong match present, drop scattered low-quality matches.
-  const top = sorted[0]?.score ?? 0
-  if (q.length >= 3 && top >= 0.6) sorted = sorted.filter((r) => r.score >= top * 0.55)
-  return limit ? sorted.slice(0, limit) : sorted
+  return limit ? out.slice(0, limit) : out
 }

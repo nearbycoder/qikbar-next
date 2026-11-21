@@ -12,23 +12,47 @@ interface SearchEntry {
 
 // Map entries into stable Item objects once so the fuzzy matcher's WeakMap cache hits on every keystroke.
 let indexItems: Promise<Item[]> | undefined
-const loadIndex = (): Promise<Item[]> =>
-  (indexItems ??= fetch('/search-index.json')
-    .then((r) => r.json() as Promise<SearchEntry[]>)
-    .then((entries) =>
-      entries.map<Item>((e) => ({
-        id: `doc:${e.href}`,
-        title: e.title,
-        subtitle: e.page ? e.page : e.group,
-        description: e.description,
-        icon: e.page ? 'hash' : 'book',
-        keywords: [e.group, e.page ?? ''].filter(Boolean),
-        href: e.href,
-      })),
-    ))
+const loadIndex = (): Promise<Item[]> => {
+  if (!indexItems) {
+    indexItems = fetch('/search-index.json')
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.json() as Promise<SearchEntry[]>
+      })
+      .then((entries) =>
+        entries.map<Item>((e) => ({
+          id: `doc:${e.href}`,
+          title: e.title,
+          subtitle: e.page ? e.page : e.group,
+          description: e.description,
+          icon: e.page ? 'hash' : 'book',
+          keywords: [e.group, e.page ?? ''].filter(Boolean),
+          href: e.href,
+        })),
+      )
+      .catch((err) => {
+        indexItems = undefined
+        throw err
+      })
+  }
+  return indexItems
+}
 
 let promptPromise: Promise<string> | undefined
-const loadPrompt = () => (promptPromise ??= fetch('/prompt.txt').then((r) => r.text()))
+const loadPrompt = () => {
+  if (!promptPromise) {
+    promptPromise = fetch('/prompt.txt')
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`)
+        return r.text()
+      })
+      .catch((err) => {
+        promptPromise = undefined
+        throw err
+      })
+  }
+  return promptPromise
+}
 
 const go = (href: string) => {
   location.href = href
@@ -39,7 +63,7 @@ export const bar = createQikbar({
   // A search button on phones, and the docs as tools for browser AI agents.
   launcher: 'touch',
   webmcp: true,
-  navigate: (href, { newTab }) => (newTab ? window.open(href, '_blank') : go(href)),
+  navigate: (href, { newTab }) => (newTab ? window.open(href, '_blank', 'noopener,noreferrer') : go(href)),
   ai: {
     provider: demoAI,
     name: 'AI',

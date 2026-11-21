@@ -7,17 +7,30 @@ const CITIES: [string, string][] = [
   ['Tokyo', 'Asia/Tokyo'], ['Sydney', 'Australia/Sydney'], ['Auckland', 'Pacific/Auckland'],
 ]
 
+const localFmt = new Intl.DateTimeFormat('en-US', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false })
+const cityFormatters = CITIES.map(([city, tz]) => ({
+  city,
+  tz,
+  label: tz.replace(/_/g, ' '),
+  timeFmt: new Intl.DateTimeFormat(undefined, { timeZone: tz, hour: 'numeric', minute: '2-digit' }),
+  dayFmt: new Intl.DateTimeFormat(undefined, { timeZone: tz, weekday: 'short' }),
+  hourFmt: new Intl.DateTimeFormat('en-US', { timeZone: tz, hour: 'numeric', hour12: false }),
+  usFmt: new Intl.DateTimeFormat('en-US', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }),
+}))
+
 function clocks(): Item[] {
   const now = new Date()
-  return CITIES.map(([city, tz]) => {
-    const time = new Intl.DateTimeFormat(undefined, { timeZone: tz, hour: 'numeric', minute: '2-digit' }).format(now)
-    const day = new Intl.DateTimeFormat(undefined, { timeZone: tz, weekday: 'short' }).format(now)
-    const offset = (Date.parse(now.toLocaleString('en-US', { timeZone: tz })) - Date.parse(now.toLocaleString('en-US'))) / 3.6e6
+  const localMs = Date.parse(localFmt.format(now))
+  return cityFormatters.map(({ city, tz, label, timeFmt, dayFmt, hourFmt, usFmt }) => {
+    const time = timeFmt.format(now)
+    const day = dayFmt.format(now)
+    const hour = Number(hourFmt.format(now))
+    const offset = (Date.parse(usFmt.format(now)) - localMs) / 3.6e6
     const diff = Math.round(offset * 2) / 2
     return {
       title: city,
-      subtitle: tz.replace(/_/g, ' '),
-      icon: { icon: 'clock', color: Number(time.split(':')[0]) >= 7 && Number(time.split(':')[0]) < 19 ? '#f59e0b' : '#6366f1' },
+      subtitle: label,
+      icon: { icon: 'clock', color: hour >= 7 && hour < 19 ? '#f59e0b' : '#6366f1' },
       keywords: [tz],
       accessories: [{ text: diff === 0 ? 'Local' : `${diff > 0 ? '+' : ''}${diff}h` }, { tag: `${day} ${time}` }],
       actions: [action.copy(`${city}: ${day} ${time}`, { title: 'Copy Time' })],

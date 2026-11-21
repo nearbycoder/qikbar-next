@@ -20,6 +20,7 @@ const describe = (code: number) => CODES[code] ?? ['Unknown', '🌡️']
 
 async function geocode(name: string, signal?: AbortSignal): Promise<Place[]> {
   const res = await fetch(`https://geocoding-api.open-meteo.com/v1/search?count=5&name=${encodeURIComponent(name)}`, { signal })
+  if (!res.ok) throw new Error(`Geocoding error ${res.status}`)
   const data = await res.json()
   return data.results ?? []
 }
@@ -34,7 +35,9 @@ async function forecast(place: Place, unit: 'celsius' | 'fahrenheit', signal?: A
     daily: 'weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max',
     forecast_days: '7',
   })
-  return fetch(`https://api.open-meteo.com/v1/forecast?${params}`, { signal }).then((r) => r.json())
+  const res = await fetch(`https://api.open-meteo.com/v1/forecast?${params}`, { signal })
+  if (!res.ok) throw new Error(`Forecast error ${res.status}`)
+  return res.json()
 }
 
 const label = (p: Place) => [p.name, p.admin1, p.country].filter(Boolean).join(', ')

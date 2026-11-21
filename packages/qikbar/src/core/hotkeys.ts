@@ -31,11 +31,14 @@ const KEY_ALIASES: Record<string, string> = {
 }
 
 const cache = new Map<string, KeyCombo[]>()
+const formatCache = new Map<string, string[][]>()
+const hasOwn = Object.prototype.hasOwnProperty
 
 /** Parse `"mod+shift+k"` or a sequence `"g s"` into combos. */
 export function parseHotkey(hotkey: string): KeyCombo[] {
   let combos = cache.get(hotkey)
   if (combos) return combos
+  if (cache.size >= 512) cache.clear()
   combos = hotkey
     .trim()
     .split(/\s+/)
@@ -50,7 +53,7 @@ export function parseHotkey(hotkey: string): KeyCombo[] {
         else if (k === 'ctrl' || k === 'control') combo.ctrl = true
         else if (k === 'alt' || k === 'option' || k === 'opt') combo.alt = true
         else if (k === 'shift') combo.shift = true
-        else combo.key = KEY_ALIASES[k] ?? k
+        else combo.key = hasOwn.call(KEY_ALIASES, k) ? KEY_ALIASES[k]! : k
       }
       return combo
     })
@@ -117,7 +120,10 @@ const PC_NAMES: Record<string, string> = {
 
 /** Format a hotkey as an array of key labels for display, e.g. `["⌘", "K"]`. */
 export function formatHotkey(hotkey: string): string[][] {
-  return parseHotkey(hotkey).map((combo) => {
+  let formatted = formatCache.get(hotkey)
+  if (formatted) return formatted
+  if (formatCache.size >= 512) formatCache.clear()
+  formatted = parseHotkey(hotkey).map((combo) => {
     const names = isMac ? MAC_SYMBOLS : PC_NAMES
     const out: string[] = []
     if (isMac) {
@@ -131,9 +137,11 @@ export function formatHotkey(hotkey: string): string[][] {
       if (combo.alt) out.push(names.alt!)
       if (combo.shift) out.push(names.shift!)
     }
-    out.push(names[combo.key] ?? (combo.key.length === 1 ? combo.key.toUpperCase() : capitalize(combo.key)))
+    out.push(hasOwn.call(names, combo.key) ? names[combo.key]! : combo.key.length === 1 ? combo.key.toUpperCase() : capitalize(combo.key))
     return out
   })
+  formatCache.set(hotkey, formatted)
+  return formatted
 }
 
 function capitalize(s: string) {

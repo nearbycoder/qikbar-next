@@ -17,6 +17,7 @@ export class LazyQikbar implements QikbarInstance {
   private loading?: Promise<Bar>
   private queue: ((bar: Bar) => void)[] = []
   private config: QikbarConfig
+  private hotkeys: string[] = []
   private teardown: (() => void)[] = []
   private destroyed = false
   private removeLauncher?: () => void
@@ -26,6 +27,7 @@ export class LazyQikbar implements QikbarInstance {
     private loader: Loader,
   ) {
     this.config = { ...config }
+    this.syncHotkeys()
     if (typeof document === 'undefined') return
     if (config.inline) {
       void this.load()
@@ -35,11 +37,15 @@ export class LazyQikbar implements QikbarInstance {
     // Agents may call tools at any time, so WebMCP needs the UI loaded now (only if the browser supports it).
     if (config.webmcp && hasModelContext()) void this.load()
     const onKey = (e: KeyboardEvent) => {
-      const hotkeys = this.config.hotkey === false ? [] : ([] as string[]).concat(this.config.hotkey ?? 'mod+k')
+      if (this.bar || !this.hotkeys.length) return
       const inField = isEditable(e.target)
-      if (!this.bar && hotkeys.some((hk) => matchesHotkey(e, hk) && (!inField || allowedInInput(hk)))) {
-        e.preventDefault()
-        this.open()
+      for (let i = 0; i < this.hotkeys.length; i++) {
+        const hk = this.hotkeys[i]!
+        if (matchesHotkey(e, hk) && (!inField || allowedInInput(hk))) {
+          e.preventDefault()
+          this.open()
+          return
+        }
       }
     }
     const onClick = (e: MouseEvent) => {
@@ -69,6 +75,10 @@ export class LazyQikbar implements QikbarInstance {
   }
 
   private launcherToken = 0
+
+  private syncHotkeys() {
+    this.hotkeys = this.config.hotkey === false ? [] : ([] as string[]).concat(this.config.hotkey ?? 'mod+k')
+  }
 
   /** The launcher is loaded on demand, so apps without one don't ship it. */
   private updateLauncher() {
@@ -185,6 +195,7 @@ export class LazyQikbar implements QikbarInstance {
   }
   configure(config: Partial<QikbarConfig>) {
     this.config = { ...this.config, ...config }
+    if ('hotkey' in config) this.syncHotkeys()
     if (this.bar) this.bar.configure(config)
     if ('launcher' in config || 'labels' in config) this.updateLauncher()
     if (config.webmcp && !this.bar && hasModelContext()) void this.load()

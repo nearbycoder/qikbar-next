@@ -36,7 +36,7 @@ import type {
   Tool,
   View,
 } from '../core/types.js'
-import { h, renderIcon, renderKbd, uid } from './dom.js'
+import { h, isSafeUrl, renderIcon, renderKbd, uid } from './dom.js'
 import { copyText, defaultNavigate } from './nav.js'
 import { renderMarkdown } from './markdown.js'
 import { css } from './styles.js'
@@ -174,11 +174,14 @@ export class Bar implements QikbarInstance {
   private rootById: Map<string, Item> | null = null
   private pinList: string[] = []
   private pinSet = new Set<string>()
-  private aliasMap: Record<string, string> = {}
+  private aliasMap: Record<string, string> = Object.create(null) as Record<string, string>
   private aliasById = new Map<string, string>()
   private routeItems: Item[] = []
   private autoItems: Item[] = []
-  private shortcutItems: Item[] = []
+  private hotkeyList: string[] = []
+  private shortcutCandidatesAll: string[] = []
+  private shortcutCandidatesInInput: string[] = []
+  private shortcutByKey = new Map<string, Item>()
   private crumbSig: string | null = null
   private footerLeftSig: string | null = null
   private footerRightSig: string | null = null
@@ -407,7 +410,8 @@ export class Bar implements QikbarInstance {
       provided,
       storage,
       prefs: () => {
-        const stored = storage.get<Record<string, any>>('preferences') ?? {}
+        const raw = storage.get<Record<string, any>>('preferences')
+        const stored = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}
         const out: Record<string, any> = {}
         for (const p of ext.preferences ?? []) if (p.default !== undefined) out[p.name] = p.default
         return { ...out, ...stored, ...provided }
@@ -516,11 +520,21 @@ export class Bar implements QikbarInstance {
   // ─── Pins & aliases ──────────────────────────────────────────────────────
 
   private syncPersonalization() {
-    this.pinList = this.storage.get<string[]>('pins') ?? []
+    const rawPins = this.storage.get<string[]>('pins')
+    this.pinList = Array.isArray(rawPins) ? rawPins.filter((x): x is string => typeof x === 'string') : []
     this.pinSet = new Set(this.pinList)
-    this.aliasMap = this.storage.get<Record<string, string>>('aliases') ?? {}
+    const nextAliases = Object.create(null) as Record<string, string>
+    const rawAliases = this.storage.get<Record<string, string>>('aliases')
     this.aliasById = new Map()
-    for (const [alias, target] of Object.entries(this.aliasMap)) this.aliasById.set(target, alias)
+    if (rawAliases && typeof rawAliases === 'object' && !Array.isArray(rawAliases)) {
+      for (const [alias, target] of Object.entries(rawAliases)) {
+        if (typeof target === 'string') {
+          nextAliases[alias] = target
+          this.aliasById.set(target, alias)
+        }
+      }
+    }
+    this.aliasMap = nextAliases
   }
 
   get personalize() {
@@ -555,7 +569,7 @@ export class Bar implements QikbarInstance {
   }
 
   setAlias(id: string, alias: string | null) {
-    const map = { ...this.aliasMap }
+    const map = Object.assign(Object.create(null) as Record<string, string>, this.aliasMap)
     const prev = this.aliasById.get(id)
     if (prev !== undefined) {
       delete map[prev]
@@ -650,6 +664,9 @@ export class Bar implements QikbarInstance {
   // ─── Config ──────────────────────────────────────────────────────────────
 
   private applyConfig(partial: Partial<QikbarConfig>, initial: boolean, prev?: QikbarConfig) {
+    if ('hotkey' in partial || initial) {
+      this.hotkeyList = this.config.hotkey === false ? [] : ([] as string[]).concat(this.config.hotkey ?? 'mod+k')
+    }
     if ('routes' in partial || 'labels' in partial || initial) {
       this.routeItems = (this.config.routes ?? []).map((r) => ({
         id: `route:${r.path}`,
@@ -831,7 +848,20 @@ export class Bar implements QikbarInstance {
     this.rootCache = out
     this.rootItemSet = itemSet
     this.rootById = byId
-    this.shortcutItems = out.filter((i) => i.shortcut)
+    const allShortcuts: string[] = []
+    const inputShortcuts: string[] = []
+    const byKey = new Map<string, Item>()
+    for (let i = 0; i < out.length; i++) {
+      const item = out[i]!
+      const s = item.shortcut
+      if (!s) continue
+      allShortcuts.push(s)
+      if (allowedInInput(s)) inputShortcuts.push(s)
+      if (!byKey.has(s)) byKey.set(s, item)
+    }
+    this.shortcutCandidatesAll = allShortcuts
+    this.shortcutCandidatesInInput = inputShortcuts
+    this.shortcutByKey = byKey
     return out
   }
 
@@ -978,6 +1008,8 @@ export class Bar implements QikbarInstance {
     const rows: Row[] = []
     const itemRows: Extract<Row, { kind: 'item' }>[] = []
     const keys = new Set<string>()
+    const wantKey = frame.userMoved ? frame.selectedKey : undefined
+    let matchedIdx = -1
     for (const g of groups) {
       if (!g.entries.length) continue
       if (g.title) rows.push({ kind: 'section', key: `s:${g.title}`, title: g.title })
@@ -985,7 +1017,9 @@ export class Bar implements QikbarInstance {
         let key = v.type === 'root' ? this.idOf(e.item) : (e.item.id ?? `${g.title}:${e.item.title}`)
         while (keys.has(key)) key += '\''
         keys.add(key)
-        const row = { kind: 'item' as const, key, item: e.item, positions: e.positions, index: itemRows.length, rowIndex: rows.length }
+        const idx = itemRows.length
+        if (wantKey && matchedIdx < 0 && key === wantKey) matchedIdx = idx
+        const row = { kind: 'item' as const, key, item: e.item, positions: e.positions, index: idx, rowIndex: rows.length }
         rows.push(row)
         itemRows.push(row)
       }
@@ -996,12 +1030,11 @@ export class Bar implements QikbarInstance {
     if (!frame.userMoved) {
       frame.selectedKey = undefined
       frame.selected = 0
+    } else if (wantKey) {
+      frame.selected = matchedIdx >= 0 ? matchedIdx : Math.min(frame.selected, Math.max(0, itemRows.length - 1))
+    } else {
+      frame.selected = Math.min(frame.selected, Math.max(0, itemRows.length - 1))
     }
-    // Preserve selection by key when possible.
-    if (frame.selectedKey) {
-      const idx = itemRows.findIndex((r) => r.key === frame.selectedKey)
-      frame.selected = idx >= 0 ? idx : Math.min(frame.selected, Math.max(0, itemRows.length - 1))
-    } else frame.selected = Math.min(frame.selected, Math.max(0, itemRows.length - 1))
     frame.selectedKey = itemRows[frame.selected]?.key
   }
 
@@ -1073,10 +1106,12 @@ export class Bar implements QikbarInstance {
       limit: 300,
     })
     for (const r of ranked) if (r.item !== aliasItem) group(r.item.section ?? this.t('commands')).entries.push({ item: r.item, positions: r.positions })
-    const related = this.relatedResults(frame, ranked.map((r) => r.item))
-    if (related.length) {
-      const g = group(this.t('related'))
-      for (const item of related) if (item !== aliasItem) g.entries.push({ item })
+    if (frame.related?.length) {
+      const related = this.relatedResults(frame, ranked.map((r) => r.item))
+      if (related.length) {
+        const g = group(this.t('related'))
+        for (const item of related) if (item !== aliasItem) g.entries.push({ item })
+      }
     }
     addSources('bottom')
 
@@ -1180,7 +1215,7 @@ export class Bar implements QikbarInstance {
       }
       const delay = source.debounce ?? 150
       const timer = setTimeout(run, delay)
-      controller.signal.addEventListener('abort', () => clearTimeout(timer))
+      controller.signal.addEventListener('abort', () => clearTimeout(timer), { once: true })
     }
   }
 
@@ -1241,7 +1276,7 @@ export class Bar implements QikbarInstance {
       }
     }
     const timer = setTimeout(run, opt.debounce ?? 250)
-    signal.addEventListener('abort', () => clearTimeout(timer))
+    signal.addEventListener('abort', () => clearTimeout(timer), { once: true })
   }
 
   /** Related results that the fuzzy search didn't already find. */
@@ -1261,7 +1296,9 @@ export class Bar implements QikbarInstance {
     frame.queryController?.abort()
     const controller = new AbortController()
     frame.queryController = controller
-    frame.controller.signal.addEventListener('abort', () => controller.abort())
+    const onFrameAbort = () => controller.abort()
+    frame.controller.signal.addEventListener('abort', onFrameAbort, { once: true })
+    controller.signal.addEventListener('abort', () => frame.controller.signal.removeEventListener('abort', onFrameAbort), { once: true })
     const run = async () => {
       if (controller.signal.aborted) return
       frame.loading++
@@ -1285,6 +1322,7 @@ export class Bar implements QikbarInstance {
           this.computeRows(frame)
         }
       } finally {
+        frame.controller.signal.removeEventListener('abort', onFrameAbort)
         frame.loading--
         this.invalidate()
       }
@@ -1292,7 +1330,7 @@ export class Bar implements QikbarInstance {
     if (immediate) void run()
     else {
       const timer = setTimeout(run, v.debounce ?? 120)
-      controller.signal.addEventListener('abort', () => clearTimeout(timer))
+      controller.signal.addEventListener('abort', () => clearTimeout(timer), { once: true })
     }
   }
 
@@ -1351,7 +1389,7 @@ export class Bar implements QikbarInstance {
       navigate: (href, options) => this.navigate(href, options?.newTab ?? false),
       openUrl: (url) => {
         this.close()
-        window.open(url, '_blank', 'noopener,noreferrer')
+        if (isSafeUrl(url)) window.open(url, '_blank', 'noopener,noreferrer')
       },
       copy: (text) => copyText(text),
       toast: (options) => this.toast(options),
@@ -1677,7 +1715,8 @@ export class Bar implements QikbarInstance {
     if (!chat || !this.aiOptions || !text.trim()) return
     if (chat.controller && !chat.controller.signal.aborted) return
     const controller = new AbortController()
-    frame.controller.signal.addEventListener('abort', () => controller.abort())
+    const onFrameAbort = () => controller.abort()
+    frame.controller.signal.addEventListener('abort', onFrameAbort, { once: true })
     chat.controller = controller
     chat.messages.push({ role: 'user', content: text })
     chat.turns.push({ role: 'user', text, tools: [] })
@@ -1718,6 +1757,7 @@ export class Bar implements QikbarInstance {
       } catch (err) {
         if (!controller.signal.aborted) turn.error = err instanceof Error ? err.message : String(err)
       } finally {
+        frame.controller.signal.removeEventListener('abort', onFrameAbort)
         turn.streaming = false
         for (const t of turn.tools) if (t.state === 'running') t.state = 'error'
         frame.loading--
@@ -1782,6 +1822,7 @@ export class Bar implements QikbarInstance {
       return `Navigated to ${item.href}.`
     }
     if (item.url) {
+      if (!isSafeUrl(item.url)) throw new Error('Blocked unsafe URL.')
       window.open(item.url, '_blank', 'noopener,noreferrer')
       return `Opened ${item.url} in a new tab.`
     }
@@ -1997,16 +2038,18 @@ export class Bar implements QikbarInstance {
 
   private onGlobalKeyDown = (e: KeyboardEvent) => {
     if (this.destroyed || e.defaultPrevented || e.isComposing) return
-    const hotkeys = this.config.hotkey === false ? [] : ([] as string[]).concat(this.config.hotkey ?? 'mod+k')
     const inField = isEditable(e.target)
-    if (hotkeys.some((hk) => matchesHotkey(e, hk) && (!inField || allowedInInput(hk)))) {
-      e.preventDefault()
-      e.stopPropagation()
-      if (this.isInline) {
-        this.open()
-        this.focusInput()
-      } else this.toggle()
-      return
+    for (let i = 0; i < this.hotkeyList.length; i++) {
+      const hk = this.hotkeyList[i]!
+      if (matchesHotkey(e, hk) && (!inField || allowedInInput(hk))) {
+        e.preventDefault()
+        e.stopPropagation()
+        if (this.isInline) {
+          this.open()
+          this.focusInput()
+        } else this.toggle()
+        return
+      }
     }
     if (this._open && !this.isInline) return
     if (this.isInline && this.dom?.root.contains(e.target as Node)) return
@@ -2018,11 +2061,11 @@ export class Bar implements QikbarInstance {
     }
     if (this.config.shortcuts === false) return
     this.rootItems()
-    if (!this.shortcutItems.length) return
-    const candidates = this.shortcutItems.map((i) => i.shortcut!).filter((s) => !inField || allowedInInput(s))
+    const candidates = inField ? this.shortcutCandidatesInInput : this.shortcutCandidatesAll
+    if (!candidates.length) return
     const matched = this.seq.feed(e, candidates)
     if (!matched.length) return
-    const item = this.shortcutItems.find((i) => i.shortcut === matched[0])
+    const item = this.shortcutByKey.get(matched[0]!)
     if (!item) return
     e.preventDefault()
     const frame = this.createFrame({ type: 'root' })
@@ -2689,7 +2732,7 @@ export class Bar implements QikbarInstance {
       left.push(h('span', null, title))
     } else if (this.config.footer) left.push(h('span', null, this.config.footer))
     else if (this.config.branding) {
-      const a = h('a', { class: 'qb-brand', href: 'https://qikbar.com', target: '_blank', rel: 'noopener' }, renderIcon('command', 13), 'qikbar')
+      const a = h('a', { class: 'qb-brand', href: 'https://qikbar.com', target: '_blank', rel: 'noopener noreferrer' }, renderIcon('command', 13), 'qikbar')
       left.push(a)
     }
     dom.footerLeft.replaceChildren(...left)

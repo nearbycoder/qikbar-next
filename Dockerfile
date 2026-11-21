@@ -17,8 +17,12 @@ RUN bun run build
 
 FROM oven/bun:1-slim
 WORKDIR /app
-COPY --from=build /app/apps/web/dist ./apps/web/dist
-COPY --from=build /app/apps/web/server.ts ./apps/web/server.ts
+ARG SITE_URL
+ENV NODE_ENV=production
+ENV SITE_URL=${SITE_URL}
 ENV PORT=3000
+COPY --from=build --chown=bun:bun /app/apps/web/dist ./apps/web/dist
+COPY --from=build --chown=bun:bun /app/apps/web/server.ts ./apps/web/server.ts
+USER bun
 EXPOSE 3000
 CMD ["bun", "apps/web/server.ts"]
