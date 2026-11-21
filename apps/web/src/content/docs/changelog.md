@@ -5,6 +5,13 @@ group: Reference
 order: 7
 ---
 
+## 0.2.2
+
+- **Faster fuzzy search.** Precomputed ASCII character tables, per-field bitmasks, and allocation-free merges make ranking 10,000 items 2.4×–3.4× faster.
+- **Smaller boot.** Dropped the boot bundle from ~3.9 KB to ~3.1 KB gzipped by removing an unused AI agent re-export edge and class-field helper wrappers.
+- **Smoother rendering & lower memory.** Cached pins, aliases, and root lookups in memory (no per-row `localStorage` reads while typing), bounded the DOM cache in virtualized lists, cached parsed SVG icon templates, and updated streaming chat, action panel, and footer nodes in place.
+- **Fixes.** `addSource()` now queries immediately when a search is already open, and `LazyQikbar` cancels its idle warmup timer on `destroy()` and recovers after transient chunk-load errors.
+
 ## 0.2.1
 
 - **Smaller boot.** 0.2.0 accidentally loaded the English labels and the storage helpers before the UI, growing the boot bundle from about 3.5 KB to 4.9 KB gzipped. It's back to about 3.9 KB, and a new test fails the build if it grows past 4.2 KB.

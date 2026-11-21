@@ -39,4 +39,4 @@ export { cachedEmbeddings, geminiEmbeddings, ollamaEmbeddings, openaiEmbeddings,
 // Theme helpers live in `@qikbar/qikbar/theme`; search, markdown and icons in `@qikbar/qikbar/utils`.
 // Keeping them out of this entry keeps the initial download tiny.
 
-export const version = '0.2.1'
+export const version = '0.2.2'
