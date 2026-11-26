@@ -121,3 +121,7 @@ The logo lives in [`assets/`](assets): `logo.svg` (mark), `logo-wordmark-dark.sv
 ## License
 
 [MIT](LICENSE). Qikbar started as a hosted SaaS and is now free and open source.
+
+## Production deployment
+
+Coolify builds the web Dockerfile from `main` when it receives the signed GitHub push webhook. Verify `/healthz` on qikbar.com after deployment.
